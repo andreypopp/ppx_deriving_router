@@ -122,3 +122,18 @@ type t =
   | Hello of { name : string; modifier : Modifier.t } [@GET "/hello/:name"]
   [@@deriving router]
 ```
+
+## Using with Melange
+
+`ppx_router` can be used with Melange, in this case it'll only emit code for
+link generation (only `href` function will be generated).
+
+To use `ppx_router` with Melange, one should use `ppx_router.browser` ppx, in
+`dune` file:
+```
+(...
+ (preprocess (pps ppx_router.browser))
+```
+
+The common setup is to define routes in a separate dune library which is
+compiled both for native and for browser.
