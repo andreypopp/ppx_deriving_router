@@ -60,7 +60,8 @@ let declare_router_attr method_ =
   let name = Printf.sprintf "router.%s" (method_to_string method_) in
   let pattern =
     let open Ast_pattern in
-    single_expr_payload (estring __')
+    single_expr_payload (map (estring __') ~f:(fun _ x -> Some x))
+    ||| map (pstr nil) ~f:(fun _ -> None)
   in
   ( method_,
     Attribute.declare name Attribute.Context.Constructor_declaration
@@ -346,14 +347,17 @@ let derive_router_td td =
           List.find_map attrs ~f:(fun (method_, attr) ->
               match Attribute.get attr ctor with
               | None -> None
-              | Some uri ->
+              | Some None -> Some (method_, None)
+              | Some (Some uri) ->
                   let uri = Uri.of_string uri.txt in
-                  Some (method_, uri))
+                  Some (method_, Some uri))
         in
         let method_, uri =
           match info with
           | None -> `GET, Uri.of_string ("/" ^ ctor.pcd_name.txt)
-          | Some x -> x
+          | Some (method_, Some uri) -> method_, uri
+          | Some (method_, None) ->
+              method_, Uri.of_string ("/" ^ ctor.pcd_name.txt)
         in
         let resolve_type name =
           let typ =

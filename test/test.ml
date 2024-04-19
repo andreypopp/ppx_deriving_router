@@ -18,6 +18,7 @@ module Routes = struct
     | Hello of { name : string; modifier : modifier option }
         [@GET "/hello/:name"]
     | Route_with_implicit_path of { param : string option }
+    | Route_with_implicit_path_post [@POST]
   [@@deriving router]
 end
 
@@ -28,6 +29,7 @@ let handler =
       | Route_with_implicit_path { param } ->
           let param = Option.value ~default:"-" param in
           Dream.html ("works as well, param is: " ^ param)
+      | Route_with_implicit_path_post -> Dream.html "posted"
       | Hello { name; modifier } ->
           let name =
             match modifier with
@@ -68,7 +70,10 @@ let test () =
   test_req `GET "/hello/world";
   test_req `GET "/hello/world?modifier=uppercase";
   test_req `GET "/Route_with_implicit_path";
-  test_req `GET "/Route_with_implicit_path?param=ok"
+  test_req `GET "/Route_with_implicit_path?param=ok";
+  test_req `POST "/Route_with_implicit_path?param=ok";
+  test_req `GET "/Route_with_implicit_path_post";
+  test_req `POST "/Route_with_implicit_path_post"
 
 let () =
   match Sys.argv.(1) with
