@@ -33,7 +33,7 @@ jobs:
             default: https://github.com/ocaml/opam-repository.git
 
       - name: set-up Node.js 21
-      - uses: actions/setup-node@v4
+        uses: actions/setup-node@v4
         with:
           node-version: 21
 
