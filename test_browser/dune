@@ -1,7 +1,8 @@
 (library
-  (name test)
-  (modes melange)
-  (preprocess (pps ppx_router.browser)))
+ (name test)
+ (modes melange)
+ (preprocess
+  (pps ppx_router.browser)))
 
 (melange.emit
  (alias js)
@@ -11,4 +12,4 @@
  (module_systems commonjs))
 
 (cram
-  (deps ./js/test_browser/test.js))
+ (deps ./js/test_browser/test.js))

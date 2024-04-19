@@ -37,7 +37,9 @@ let test () =
 
 let () =
   match Sys.argv.(2) with
-  | exception Invalid_argument _ -> prerr_endline "missing subcommand"; exit 1
+  | exception Invalid_argument _ ->
+      prerr_endline "missing subcommand";
+      exit 1
   | "test" -> test ()
   | _ ->
       prerr_endline "unknown subcommand";
