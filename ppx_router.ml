@@ -224,7 +224,7 @@ let derive_handle td =
 let derive_href_case ~loc (path : path) query x =
   match path, query with
   | [], [] -> [%expr "/"]
-  | path, query ->
+  | path, query -> (
       let pout, out = patt_and_expr ~loc (gen_symbol ~prefix:"out" ()) in
       let psep, sep = patt_and_expr ~loc (gen_symbol ~prefix:"_sep" ()) in
       let body = [%expr Buffer.contents [%e out]] in
@@ -288,7 +288,9 @@ let derive_href_case ~loc (path : path) query x =
             | Pparam (name, _typ) -> Some (make name))
         @ List.map query ~f:(fun (name, _typ) -> make name)
       in
-      pexp_let ~loc Nonrecursive bnds body
+      match bnds with
+      | [] -> body
+      | bnds -> pexp_let ~loc Nonrecursive bnds body)
 
 let derive_href td (ctors : ctor list) =
   let loc = td.ptype_loc in
@@ -299,14 +301,19 @@ let derive_href td (ctors : ctor list) =
         let loc = ctor.ctor.pcd_loc in
         let name = ctor.ctor.pcd_name in
         let lid = { loc; txt = Lident name.txt } in
-        match ctor.path, ctor.query with
-        | [], [] ->
+        let has_params =
+          List.exists ctor.path ~f:(function
+            | Pparam _ -> true
+            | _ -> false)
+        in
+        match has_params, ctor.query with
+        | false, [] ->
             let p = ppat_construct ~loc lid None in
-            p --> derive_href_case ~loc [] [] [%expr assert false]
-        | path, query ->
+            p --> derive_href_case ~loc ctor.path [] [%expr assert false]
+        | _, query ->
             let px, x = patt_and_expr ~loc (gen_symbol ~prefix:"x" ()) in
             let p = ppat_construct ~loc lid (Some px) in
-            p --> derive_href_case ~loc path query x)
+            p --> derive_href_case ~loc ctor.path query x)
   in
   [%stri let [%p pvar ~loc name] = [%e pexp_function ~loc cases]]
 
