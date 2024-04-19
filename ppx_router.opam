@@ -12,6 +12,7 @@ depends: [
   "containers"
   "routes"
   "dream"
+  "melange"
   "uri"
   "odoc" {with-doc}
 ]

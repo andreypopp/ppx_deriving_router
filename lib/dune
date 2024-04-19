@@ -1,9 +1,10 @@
 (library
  (name ppx_router)
- (modules ppx_router)
+ (modules :standard \ ppx_router_runtime ppx_router_test)
+ (wrapped false)
  (public_name ppx_router)
  (libraries uri ppxlib containers)
- (kind ppx_rewriter)
+ (kind ppx_deriver)
  (ppx_runtime_libraries ppx_router.runtime)
  (preprocess
   (pps ppxlib.metaquot)))
@@ -12,9 +13,7 @@
  (name ppx_router_runtime)
  (modules ppx_router_runtime)
  (public_name ppx_router.runtime)
- (libraries containers dream routes)
- (preprocess
-  (pps ppxlib.metaquot)))
+ (libraries containers dream routes))
 
 (executable
  (name ppx_router_test)

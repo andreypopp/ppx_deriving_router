@@ -1,0 +1,21 @@
+(library
+ (name ppx_router_browser)
+ (modules :standard \ ppx_router_runtime)
+ (wrapped false)
+ (public_name ppx_router.browser)
+ (libraries uri ppxlib containers)
+ (kind ppx_deriver)
+ (ppx_runtime_libraries ppx_router.browser_runtime)
+ (preprocess
+  (pps ppxlib.metaquot)))
+
+(library
+ (name ppx_router_browser_runtime)
+ (wrapped false)
+ (modes melange)
+ (modules ppx_router_runtime)
+ (public_name ppx_router.browser_runtime)
+ (libraries))
+
+(copy_files#
+ (files ../lib/ppx_router_common.ml))
