@@ -1,0 +1,7 @@
+(executable
+  (name test)
+  (libraries dream)
+  (preprocess (pps ppx_router)))
+
+(cram
+  (deps ./test.exe))
