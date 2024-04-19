@@ -17,3 +17,9 @@
   works as well, param is: -
   ## GET /Route_with_implicit_path?param=ok
   works as well, param is: ok
+  ## POST /Route_with_implicit_path?param=ok
+  Method not allowed
+  ## GET /Route_with_implicit_path_post
+  Method not allowed
+  ## POST /Route_with_implicit_path_post
+  posted
