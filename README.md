@@ -24,17 +24,23 @@ module Routes = struct
 
   type t =
     | Home [@GET "/"]
+    | About
     | Hello of { name : string; repeat : int option } [@GET "/hello/:name"]
     [@@deriving router]
 end
 ```
 
-Notice the `[@@deriving router]` annotation, which instruct to generate code
+Notice the `[@@deriving router]` annotation, which instructs to generate code
 for routing based on the variant type definition.
 
-Each branch in the variant type definition corresponds to a separate route, it
-needs to have a `[@GET "/path"]` attribute (or `[@POST "/path"]`, etc.) which
-specify a path pattern for the route.
+Each branch in the variant type definition corresponds to a separate route.
+
+It can have a `[@GET "/path"]` attribute (or `[@POST "/path"]`, etc.) which
+specifies a path pattern for the route. If such attribute is missing, the path
+is then inferred from the variant name, for example `About` will be routed to
+`/About`, the method is GET by default (but one can supply `[@POST]`, etc.
+attribute without any payload just to specify the method, leaving path
+implicit).
 
 The path pattern can contain named parameters, like `:name` in the example
 above. In this case the parameter will be extracted from the path and used in
@@ -45,6 +51,7 @@ Now we can generate hrefs for these routes:
 ```ocaml
 let () =
   assert (Routes.href Home = "/");
+  assert (Routes.href About = "/About");
   assert (Routes.href (Hello {name="world"; repeat=1} = "/hello/world?repeat=1")
 ```
 
@@ -53,6 +60,7 @@ and define a handler for them:
 let handle = Routes.handle (fun route _req ->
   match route with
   | Home -> Dream.html "Home page!"
+  | About -> Dream.html "About page!"
   | Hello {name; repeat} ->
     let name =
       match repeat with
