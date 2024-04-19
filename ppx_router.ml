@@ -24,10 +24,6 @@ let collect_params_rev ~loc:_ uri =
   in
   aux [] (Uri.path uri |> String.split_on_char ~by:'/')
 
-let string_patt () =
-  let open Ast_pattern in
-  single_expr_payload (estring __')
-
 type ctor = {
   ctor : constructor_declaration;
   method_ : method_;
@@ -62,9 +58,13 @@ let hash_route_by_path : ctor Hash.t =
 
 let declare_router_attr method_ =
   let name = Printf.sprintf "router.%s" (method_to_string method_) in
+  let pattern =
+    let open Ast_pattern in
+    single_expr_payload (estring __')
+  in
   ( method_,
     Attribute.declare name Attribute.Context.Constructor_declaration
-      (string_patt ()) (fun x -> x) )
+      pattern (fun x -> x) )
 
 let attr_GET = declare_router_attr `GET
 let attr_POST = declare_router_attr `POST
@@ -348,13 +348,11 @@ let derive_router_td td =
               | None -> None
               | Some uri ->
                   let uri = Uri.of_string uri.txt in
-                  Some (ctor, method_, uri))
+                  Some (method_, uri))
         in
-        let ctor, method_, uri =
+        let method_, uri =
           match info with
-          | None ->
-              Location.raise_errorf ~loc
-                "missing attribute [@GET], [@POST], [@PUT] or [@DELETE]"
+          | None -> `GET, Uri.of_string ("/" ^ ctor.pcd_name.txt)
           | Some x -> x
         in
         let resolve_type name =

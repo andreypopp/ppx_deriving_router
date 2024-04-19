@@ -17,6 +17,7 @@ module Routes = struct
     | Home [@GET "/"]
     | Hello of { name : string; modifier : modifier option }
         [@GET "/hello/:name"]
+    | Route_with_implicit_path of { param : string option }
   [@@deriving router]
 end
 
@@ -24,6 +25,9 @@ let handler =
   Routes.handle (fun route _req ->
       match route with
       | Home -> Dream.html "HOME PAGE"
+      | Route_with_implicit_path { param } ->
+          let param = Option.value ~default:"-" param in
+          Dream.html ("works as well, param is: " ^ param)
       | Hello { name; modifier } ->
           let name =
             match modifier with
@@ -39,6 +43,10 @@ let run () = Dream.run @@ Dream.logger @@ handler
 let test () =
   print_endline "# TESTING HREF GENERATION";
   print_endline (Routes.href Routes.Home);
+  print_endline
+    (Routes.href (Routes.Route_with_implicit_path { param = None }));
+  print_endline
+    (Routes.href (Routes.Route_with_implicit_path { param = Some "ok" }));
   print_endline
     (Routes.href (Routes.Hello { name = "world"; modifier = None }));
   print_endline
@@ -58,7 +66,9 @@ let test () =
   in
   test_req `GET "/";
   test_req `GET "/hello/world";
-  test_req `GET "/hello/world?modifier=uppercase"
+  test_req `GET "/hello/world?modifier=uppercase";
+  test_req `GET "/Route_with_implicit_path";
+  test_req `GET "/Route_with_implicit_path?param=ok"
 
 let () =
   match Sys.argv.(1) with
