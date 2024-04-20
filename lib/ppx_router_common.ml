@@ -105,6 +105,12 @@ let rec derive_conv suffix t =
       List.fold_left args ~init ~f:(fun acc arg ->
           pexp_apply ~loc acc [ Nolabel, derive_conv suffix arg ])
 
+let td_to_ty param td =
+  let name = td.ptype_name.txt in
+  let loc = td.ptype_loc in
+  let args = match param with Some param -> [ param ] | None -> [] in
+  ptyp_constr ~loc (Located.lident ~loc name) args
+
 let extract td =
   let loc = td.ptype_loc in
   let param =

@@ -1,0 +1,37 @@
+type modifier = Uppercase | Lowercase
+
+let rec modifier_of_url_query = function
+  | [] -> None
+  | [ "uppercase" ] -> Some Uppercase
+  | [ "lowercase" ] -> Some Lowercase
+  | _ :: rest -> modifier_of_url_query rest (* last wins, if multiple *)
+
+let modifier_to_url_query = function
+  | Uppercase -> [ "uppercase" ]
+  | Lowercase -> [ "lowercase" ]
+
+module Pages = struct
+  open Ppx_router_runtime.Types
+
+  type t =
+    | Home [@GET "/"]
+    | Hello of { name : string; modifier : modifier option }
+        [@GET "/hello/:name"]
+    | Route_with_implicit_path of { param : string option }
+    | Route_with_implicit_path_post [@POST]
+  [@@deriving router]
+end
+
+module Api = struct
+  open Ppx_router_runtime.Types
+  open Ppx_deriving_json_runtime.Primitives
+
+  type user = { id : int } [@@deriving json]
+
+  type _ t =
+    | List_users : user list t [@GET "/"]
+    | Create_user : user t [@POST "/"]
+    | Get_user : { id : int } -> user t [@GET "/:id"]
+    (* | Raw_response : Dream.response t [@GET "/raw-response"] *)
+  [@@deriving router]
+end

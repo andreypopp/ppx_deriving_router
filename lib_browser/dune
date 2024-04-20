@@ -1,6 +1,6 @@
 (library
  (name ppx_router_browser)
- (modules :standard \ ppx_router_runtime)
+ (modules :standard \ ppx_router_runtime ppx_router_test)
  (wrapped false)
  (public_name ppx_router.browser)
  (libraries uri ppxlib containers)
@@ -16,6 +16,11 @@
  (modules ppx_router_runtime)
  (public_name ppx_router.browser_runtime)
  (libraries))
+
+(executable
+ (name ppx_router_test)
+ (modules ppx_router_test)
+ (libraries ppx_router_browser))
 
 (copy_files#
  (files ../lib/ppx_router_common.ml))

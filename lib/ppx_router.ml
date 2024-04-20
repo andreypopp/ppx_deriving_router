@@ -8,12 +8,6 @@ let derive_path_name (ctor : ctor) =
   let name = ctor.ctor.pcd_name.txt in
   mangle (Prefix "path") name
 
-let td_to_ty param td =
-  let name = td.ptype_name.txt in
-  let loc = td.ptype_loc in
-  let args = match param with Some param -> [ param ] | None -> [] in
-  ptyp_constr ~loc (Located.lident ~loc name) args
-
 let td_to_ty_handler param td =
   let loc = td.ptype_loc in
   match param with

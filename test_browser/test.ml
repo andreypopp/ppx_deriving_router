@@ -1,39 +1,33 @@
-type modifier = Uppercase | Lowercase
+open Routing
 
-let rec modifier_of_url_query = function
-  | [] -> None
-  | [ "uppercase" ] -> Some Uppercase
-  | [ "lowercase" ] -> Some Lowercase
-  | _ :: rest -> modifier_of_url_query rest (* last wins, if multiple *)
+let ( >>= ) p f = Js.Promise.then_ f p
 
-let modifier_to_url_query = function
-  | Uppercase -> [ "uppercase" ]
-  | Lowercase -> [ "lowercase" ]
+module Make_fetch (Route : sig
+  type 'a t
 
-module Routes = struct
-  open Ppx_router_runtime.Types
-
-  type t =
-    | Home [@GET "/"]
-    | Hello of { name : string; modifier : modifier option }
-        [@GET "/hello/:name"]
-    | Route_with_implicit_path of { param : string option }
-    | Route_with_implicit_path_post [@POST]
-  [@@deriving router]
+  val href : 'a t -> string
+  val decode_response : 'a t -> string -> 'a
+end) : sig
+  val fetch : root:string -> 'a Route.t -> 'a Js.Promise.t
+end = struct
+  let fetch ~root route =
+    let href = root ^ Route.href route in
+    Fetch.fetch href >>= Fetch.Response.text >>= fun data ->
+    let value = Route.decode_response route data in
+    Js.Promise.resolve value
 end
+
+module Fetch = Make_fetch (Api)
 
 let test () =
   print_endline "# TESTING HREF GENERATION";
-  print_endline (Routes.href Routes.Home);
+  print_endline (Pages.href Pages.Home);
+  print_endline (Pages.href (Route_with_implicit_path { param = None }));
   print_endline
-    (Routes.href (Routes.Route_with_implicit_path { param = None }));
+    (Pages.href (Route_with_implicit_path { param = Some "ok" }));
+  print_endline (Pages.href (Hello { name = "world"; modifier = None }));
   print_endline
-    (Routes.href (Routes.Route_with_implicit_path { param = Some "ok" }));
-  print_endline
-    (Routes.href (Routes.Hello { name = "world"; modifier = None }));
-  print_endline
-    (Routes.href
-       (Routes.Hello { name = "world"; modifier = Some Uppercase }))
+    (Pages.href (Hello { name = "world"; modifier = Some Uppercase }))
 
 let () =
   match Sys.argv.(2) with
@@ -41,6 +35,12 @@ let () =
       prerr_endline "missing subcommand";
       exit 1
   | "test" -> test ()
+  | "get_user" ->
+      ignore
+        ( Fetch.fetch ~root:"http://localhost:8080" (Get_user { id = 121 })
+        >>= fun user ->
+          Js.log user;
+          Js.Promise.resolve () )
   | _ ->
       prerr_endline "unknown subcommand";
       exit 1
