@@ -31,4 +31,4 @@
   ## GET /121
   {"id":121}
   ## GET /raw-response
-  Not found
+  RAW RESPONSE

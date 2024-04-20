@@ -6,15 +6,14 @@ module Make_fetch (Route : sig
   type 'a t
 
   val href : 'a t -> string
-  val decode_response : 'a t -> string -> 'a
+  val decode_response : 'a t -> Fetch.Response.t -> 'a Js.Promise.t
 end) : sig
   val fetch : root:string -> 'a Route.t -> 'a Js.Promise.t
 end = struct
   let fetch ~root route =
     let href = root ^ Route.href route in
-    Fetch.fetch href >>= Fetch.Response.text >>= fun data ->
-    let value = Route.decode_response route data in
-    Js.Promise.resolve value
+    Fetch.fetch href >>= fun response ->
+    Route.decode_response route response
 end
 
 module Fetch = Make_fetch (Api)
@@ -29,18 +28,20 @@ let test () =
   print_endline
     (Pages.href (Hello { name = "world"; modifier = Some Uppercase }))
 
+let fetch_and_log req =
+  ignore
+    ( Fetch.fetch ~root:"http://localhost:8080" req >>= fun user ->
+      Js.log user;
+      Js.Promise.resolve () )
+
 let () =
   match Sys.argv.(2) with
   | exception Invalid_argument _ ->
       prerr_endline "missing subcommand";
       exit 1
   | "test" -> test ()
-  | "get_user" ->
-      ignore
-        ( Fetch.fetch ~root:"http://localhost:8080" (Get_user { id = 121 })
-        >>= fun user ->
-          Js.log user;
-          Js.Promise.resolve () )
+  | "get_user" -> fetch_and_log (Get_user { id = 121 })
+  | "raw" -> fetch_and_log Raw_response
   | _ ->
       prerr_endline "unknown subcommand";
       exit 1

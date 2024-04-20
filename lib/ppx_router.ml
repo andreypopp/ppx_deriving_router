@@ -187,4 +187,8 @@ let derive_router_td td =
            | Some _ -> evar ~loc handle_name
            | None -> [%expr fun f -> [%e evar ~loc handle_name] { f }]]]
 
-let _ : Deriving.t = register derive_router_td
+let expand_response ~ctxt =
+  let loc = Expansion_context.Extension.extension_point_loc ctxt in
+  [%type: Dream.response]
+
+let () = register () ~derive:derive_router_td ~expand_response

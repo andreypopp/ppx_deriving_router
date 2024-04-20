@@ -22,7 +22,7 @@ let api_handler : Dream.handler =
   let f : type a. a Api.t -> Dream.request -> a Lwt.t =
    fun x _req ->
     match x with
-    (* | Raw_response -> Dream.respond "RAW RESPONSE" *)
+    | Raw_response -> Dream.respond "RAW RESPONSE"
     | List_users -> Lwt.return []
     | Create_user -> Lwt.return { Api.id = 42 }
     | Get_user { id } -> Lwt.return { Api.id }

@@ -1,4 +1,8 @@
-type modifier = Uppercase | Lowercase
+type modifier =
+  | Uppercase
+  | Lowercase
+      (** this a custom type which we want to be able to serialize/deserialize
+          from/to the URL query *)
 
 let rec modifier_of_url_query = function
   | [] -> None
@@ -32,6 +36,6 @@ module Api = struct
     | List_users : user list t [@GET "/"]
     | Create_user : user t [@POST "/"]
     | Get_user : { id : int } -> user t [@GET "/:id"]
-    (* | Raw_response : Dream.response t [@GET "/raw-response"] *)
+      | Raw_response : [%response] t [@GET "/raw-response"]
   [@@deriving router]
 end

@@ -11,7 +11,8 @@ let derive_decode_response td param ctors =
   | None ->
       [%stri
         let [%p pvar ~loc name] :
-            [%t td_to_ty param td] -> string -> string =
+            [%t td_to_ty param td] -> Fetch.Response.t -> Fetch.Response.t
+            =
          fun _route response -> response]
   | Some _ ->
       let cases =
@@ -25,21 +26,28 @@ let derive_decode_response td param ctors =
             let p = ppat_construct ~loc lid arg in
             let e =
               match ctor.response with
-              | None | Some [%type: Dream.response] -> [%expr data]
+              | None | Some [%type: Fetch.Response.t] ->
+                  [%expr Js.Promise.resolve response]
               | Some t ->
                   [%expr
-                    let json = Js.Json.parseExn data in
-                    [%of_json: [%t t]] json]
+                    Fetch.Response.json response
+                    |> Js.Promise.then_ (fun json ->
+                           Js.Promise.resolve ([%of_json: [%t t]] json))]
             in
             p --> e)
       in
       [%stri
         let [%p pvar ~loc name] =
-         fun (type a) (route : a t) (data : string) : a ->
+         fun (type a) (route : a t) (response : Fetch.Response.t) :
+             a Js.Promise.t ->
           [%e pexp_match ~loc [%expr route] cases]]
 
 let derive_router_td td =
   let _param, ctors = extract td in
   [ Derive_href.derive td ctors; derive_decode_response td _param ctors ]
 
-let _ : Deriving.t = register derive_router_td
+let expand_response ~ctxt =
+  let loc = Expansion_context.Extension.extension_point_loc ctxt in
+  [%type: Fetch.Response.t]
+
+let () = register () ~derive:derive_router_td ~expand_response

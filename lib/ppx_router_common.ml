@@ -205,7 +205,7 @@ let extract td =
   in
   param, List.rev ctors
 
-let register derive =
+let register ~expand_response ~derive () =
   let derive_router ~ctxt (_rec_flag, type_decls) =
     let loc = Expansion_context.Deriver.derived_item_loc ctxt in
     match type_decls with
@@ -216,7 +216,14 @@ let register derive =
   in
   let args = Deriving.Args.(empty) in
   let str_type_decl = Deriving.Generator.V2.make args derive_router in
-  Deriving.add ~str_type_decl "router"
+  ignore (Deriving.add ~str_type_decl "router" : Deriving.t);
+  let expand_response =
+    Context_free.Rule.extension
+      (Extension.V3.declare "router.response" Extension.Context.core_type
+         Ast_pattern.(pstr nil)
+         expand_response)
+  in
+  Driver.register_transformation ~rules:[ expand_response ] "router"
 
 module Derive_href = struct
   let case ~loc (path : path) query x =
