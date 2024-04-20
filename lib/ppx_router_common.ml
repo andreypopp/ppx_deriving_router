@@ -29,6 +29,7 @@ type ctor = {
   method_ : method_;
   path : path;
   query : (string * core_type) list;
+  response : core_type option;
 }
 
 and path = path_segment list
@@ -106,10 +107,13 @@ let rec derive_conv suffix t =
 
 let extract td =
   let loc = td.ptype_loc in
-  let () =
+  let param =
     match td.ptype_params with
-    | [] -> ()
-    | _ -> Location.raise_errorf ~loc "type parameters are not supported"
+    | [] -> None
+    | [ _ ] -> Some (ptyp_var ~loc "value")
+    | _ ->
+        Location.raise_errorf ~loc
+          "only no or a single type parameter is supported"
   in
   let ctors =
     match td.ptype_kind with
@@ -173,7 +177,15 @@ let extract td =
               if is_path_param then None
               else Some (ld.pld_name.txt, ld.pld_type))
         in
-        let ctor = { ctor; method_; path; query } in
+        let response =
+          Option.map
+            (fun x ->
+              match x.ptyp_desc with
+              | Ptyp_constr (_, [ x ]) -> x
+              | _ -> assert false)
+            ctor.pcd_res
+        in
+        let ctor = { ctor; method_; path; query; response } in
         (match
            List.find_opt ctors ~f:(equal_route_by_path_method ctor)
          with
@@ -185,7 +197,7 @@ let extract td =
               (Uri.path uri) conflict.ctor.pcd_name.txt);
         ctor :: ctors)
   in
-  List.rev ctors
+  param, List.rev ctors
 
 let register derive =
   let derive_router ~ctxt (_rec_flag, type_decls) =
@@ -280,6 +292,23 @@ module Derive_href = struct
   let derive td (ctors : ctor list) =
     let loc = td.ptype_loc in
     let name = td.ptype_name.txt in
+    let t, we =
+      let vs =
+        List.map td.ptype_params ~f:(fun _ -> gen_symbol ~prefix:"t" ())
+      in
+      let t =
+        ptyp_constr ~loc
+          { txt = Lident name; loc }
+          (List.map vs ~f:(fun txt ->
+               ptyp_constr ~loc { txt = Lident txt; loc } []))
+      in
+      let t = [%type: [%t t] -> string] in
+      let we e =
+        List.fold_left vs ~init:e ~f:(fun acc txt ->
+            pexp_newtype ~loc { txt; loc } acc)
+      in
+      t, we
+    in
     let name = Ppxlib.Expansion_helpers.mangle (Suffix "href") name in
     let cases =
       List.map ctors ~f:(fun ctor ->
@@ -302,5 +331,7 @@ module Derive_href = struct
               let p = ppat_construct ~loc lid (Some px) in
               p --> case ~loc ctor.path query x)
     in
-    [%stri let [%p pvar ~loc name] = [%e pexp_function ~loc cases]]
+    [%stri
+      let [%p pvar ~loc name] =
+        [%e we [%expr ([%e pexp_function ~loc cases] : [%t t])]]]
 end

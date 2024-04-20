@@ -10,7 +10,7 @@ let modifier_to_url_query = function
   | Uppercase -> [ "uppercase" ]
   | Lowercase -> [ "lowercase" ]
 
-module Routes = struct
+module Page_routes = struct
   open Ppx_router_runtime.Types
 
   type t =
@@ -22,8 +22,8 @@ module Routes = struct
   [@@deriving router]
 end
 
-let handler =
-  Routes.handle (fun route _req ->
+let pages_handler =
+  Page_routes.handle (fun route _req ->
       match route with
       | Home -> Dream.html "HOME PAGE"
       | Route_with_implicit_path { param } ->
@@ -40,40 +40,70 @@ let handler =
           let greeting = Printf.sprintf "Hello, %s!" name in
           Dream.html greeting)
 
-let run () = Dream.run @@ Dream.logger @@ handler
+module Api_routes = struct
+  open Ppx_router_runtime.Types
+  open Ppx_deriving_json_runtime.Primitives
+
+  type user = { id : int } [@@deriving json]
+
+  type _ t =
+    | List_users : user list t [@GET "/"]
+    | Create_user : user t [@POST "/"]
+    | Get_user : { id : int } -> user t [@GET "/:id"]
+    | Raw_response : Dream.response t [@GET "/raw-response"]
+  [@@deriving router]
+end
+
+let api_handler : Dream.handler =
+  let f : type a. a Api_routes.t -> Dream.request -> a Lwt.t =
+   fun x _req ->
+    match x with
+    | Raw_response -> Dream.respond "RAW RESPONSE"
+    | List_users -> Lwt.return []
+    | Create_user -> Lwt.return { Api_routes.id = 42 }
+    | Get_user { id } -> Lwt.return { Api_routes.id }
+  in
+  Api_routes.handle { f }
+
+let run () = Dream.run @@ Dream.logger @@ pages_handler
 
 let test () =
   print_endline "# TESTING HREF GENERATION";
-  print_endline (Routes.href Routes.Home);
+  print_endline (Page_routes.href Home);
   print_endline
-    (Routes.href (Routes.Route_with_implicit_path { param = None }));
+    (Page_routes.href (Route_with_implicit_path { param = None }));
   print_endline
-    (Routes.href (Routes.Route_with_implicit_path { param = Some "ok" }));
+    (Page_routes.href (Route_with_implicit_path { param = Some "ok" }));
   print_endline
-    (Routes.href (Routes.Hello { name = "world"; modifier = None }));
+    (Page_routes.href (Hello { name = "world"; modifier = None }));
   print_endline
-    (Routes.href
-       (Routes.Hello { name = "world"; modifier = Some Uppercase }));
+    (Page_routes.href
+       (Hello { name = "world"; modifier = Some Uppercase }));
   print_endline "# TESTING ROUTE MATCHING GENERATION";
-  let test_req method_ target =
+  let test_req h method_ target =
     print_endline
       (Printf.sprintf "## %s %s" (Dream.method_to_string method_) target);
     Lwt_main.run
       (let open Lwt.Infix in
        let req = Dream.request ~method_ ~target "" in
-       handler req >>= fun resp ->
+       h req >>= fun resp ->
        Dream.body resp >>= fun body ->
        print_endline body;
        Lwt.return ())
   in
-  test_req `GET "/";
-  test_req `GET "/hello/world";
-  test_req `GET "/hello/world?modifier=uppercase";
-  test_req `GET "/Route_with_implicit_path";
-  test_req `GET "/Route_with_implicit_path?param=ok";
-  test_req `POST "/Route_with_implicit_path?param=ok";
-  test_req `GET "/Route_with_implicit_path_post";
-  test_req `POST "/Route_with_implicit_path_post"
+  test_req pages_handler `GET "/";
+  test_req pages_handler `GET "/hello/world";
+  test_req pages_handler `GET "/hello/world?modifier=uppercase";
+  test_req pages_handler `GET "/Route_with_implicit_path";
+  test_req pages_handler `GET "/Route_with_implicit_path?param=ok";
+  test_req pages_handler `POST "/Route_with_implicit_path?param=ok";
+  test_req pages_handler `GET "/Route_with_implicit_path_post";
+  test_req pages_handler `POST "/Route_with_implicit_path_post";
+  print_endline "# TESTING ROUTE MATCHING GENERATION (API)";
+  test_req api_handler `GET "/";
+  test_req api_handler `POST "/";
+  test_req api_handler `GET "/121";
+  test_req api_handler `GET "/raw-response"
 
 let () =
   match Sys.argv.(1) with

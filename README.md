@@ -15,6 +15,7 @@ Put this into your `dune` file:
 ```
 (...
  (preprocess (pps ppx_router))
+ ...)
 ```
 
 Define your routes:
@@ -123,6 +124,53 @@ type t =
   [@@deriving router]
 ```
 
+## Defining routes with typed responses
+
+It is possible to define routes with typed responses, with code automatically
+generated to turn such responses into JSON payloads and wrap into
+`Dream.response` values.
+
+In this case the route type should be defined as GADT with a parameter for the
+response type:
+
+```ocaml
+module Api_routes = struct
+  open Ppx_router_runtime.Types
+  open Ppx_deriving_json_runtime.Primitives
+
+  type user = { id : int } [@@deriving json]
+
+  type _ t =
+    | List_users : user list t [@GET "/"]
+    | Create_user : user t [@POST "/"]
+    | Get_user : { id : int } -> user t [@GET "/:id"]
+    | Raw : Dream.response t [@GET "/raw"]
+  [@@deriving router]
+end
+```
+
+Then handler can be defined as follows:
+```ocaml
+let api_handler : Dream.handler =
+  let f : type a. a Api_routes.t -> Dream.request -> a Lwt.t =
+   fun x _req ->
+    match x with
+    | List_users -> Lwt.return []
+    | Create_user -> Lwt.return { Api_routes.id = 42 }
+    | Get_user { id } -> Lwt.return { Api_routes.id }
+    | Raw -> Dream.respond "RAW"
+  in
+  Api_routes.handle { f }
+```
+
+Notice that the type annotation for `f` is required, and it should be passed
+within a record to `Api_routes.handle` function.
+
+Also notice the `Raw : Dream.response t` case, which allows to return a raw
+Dream response, no encode will be generated in this case, but no type
+information will be available either. This is useful, though, when one needs to
+have API and non API routes together.
+
 ## Using with Melange
 
 `ppx_router` can be used with Melange, in this case it'll only emit code for
@@ -133,6 +181,7 @@ To use `ppx_router` with Melange, one should use `ppx_router.browser` ppx, in
 ```
 (...
  (preprocess (pps ppx_router.browser))
+ ...)
 ```
 
 The common setup is to define routes in a separate dune library which is

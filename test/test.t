@@ -23,3 +23,12 @@
   Method not allowed
   ## POST /Route_with_implicit_path_post
   posted
+  # TESTING ROUTE MATCHING GENERATION (API)
+  ## GET /
+  []
+  ## POST /
+  {"id":42}
+  ## GET /121
+  {"id":121}
+  ## GET /raw-response
+  RAW RESPONSE

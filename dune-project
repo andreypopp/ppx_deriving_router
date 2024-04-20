@@ -24,4 +24,5 @@
   routes
   dream
   melange
+  ppx_deriving_json
   uri))

@@ -31,6 +31,7 @@ jobs:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
           opam-repositories: |
             default: https://github.com/ocaml/opam-repository.git
+            andreypopp: opam repo add andreypopp https://github.com/andreypopp/opam-repository.git
 
       - name: set-up Node.js 21
         uses: actions/setup-node@v4

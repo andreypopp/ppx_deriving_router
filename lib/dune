@@ -3,7 +3,7 @@
  (modules :standard \ ppx_router_runtime ppx_router_test)
  (wrapped false)
  (public_name ppx_router)
- (libraries uri ppxlib containers)
+ (libraries uri ppxlib containers ppx_deriving_json.native)
  (kind ppx_deriver)
  (ppx_runtime_libraries ppx_router.runtime)
  (preprocess
