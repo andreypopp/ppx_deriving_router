@@ -27,3 +27,5 @@ end
 val encode_path : Buffer.t -> string -> unit
 val encode_query_key : Buffer.t -> string -> unit
 val encode_query_value : Buffer.t -> string -> unit
+
+type response = Fetch.Response.t

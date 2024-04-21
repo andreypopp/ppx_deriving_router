@@ -11,34 +11,53 @@ let derive_decode_response td param ctors =
   | None ->
       [%stri
         let [%p pvar ~loc name] :
-            [%t td_to_ty param td] -> Fetch.Response.t -> Fetch.Response.t
-            =
-         fun _route response -> response]
+            [%t td_to_ty param td] ->
+            Fetch.Response.t ->
+            Fetch.Response.t Js.Promise.t =
+         fun _route response -> Js.Promise.resolve response]
   | Some _ ->
       let cases =
-        List.map ctors ~f:(fun ctor ->
-            let lid = { txt = Lident ctor.ctor.pcd_name.txt; loc } in
-            let arg =
-              match ctor.ctor.pcd_args with
-              | Pcstr_tuple [] -> None
-              | _ -> Some (ppat_any ~loc)
-            in
-            let p = ppat_construct ~loc lid arg in
-            let e =
-              match ctor.response with
-              | None | Some [%type: Fetch.Response.t] ->
-                  [%expr Js.Promise.resolve response]
-              | Some t ->
-                  [%expr
-                    Fetch.Response.json response
-                    |> Js.Promise.then_ (fun json ->
-                           Js.Promise.resolve ([%of_json: [%t t]] json))]
-            in
-            p --> e)
+        List.map ctors ~f:(function
+          | Mount
+              {
+                m_ctor;
+                m_prefix = _;
+                m_typ;
+                m_typ_param = _;
+                m_response = _;
+              } ->
+              let p, x = match_ctor m_ctor in
+              let next =
+                mangle_lid (Suffix "decode_response") m_typ.txt
+              in
+              let next = evar ~loc (Longident.name next) in
+              p --> [%expr [%e next] [%e x] response]
+          | Leaf ctor ->
+              let arg =
+                match ctor.ctor.pcd_args with
+                | Pcstr_tuple [] -> None
+                | _ -> Some (ppat_any ~loc)
+              in
+              let p = pat_ctor ctor.ctor arg in
+              let e =
+                match ctor.response with
+                | `response -> [%expr Js.Promise.resolve response]
+                | `json_response t ->
+                    [%expr
+                      Fetch.Response.json response
+                      |> Js.Promise.then_ (fun json ->
+                             Js.Promise.resolve ([%of_json: [%t t]] json))]
+              in
+              p --> e)
+      in
+      let t =
+        td_to_ty
+          (Some (ptyp_constr ~loc { loc; txt = Longident.parse "a" } []))
+          td
       in
       [%stri
         let [%p pvar ~loc name] =
-         fun (type a) (route : a t) (response : Fetch.Response.t) :
+         fun (type a) (route : [%t t]) (response : Fetch.Response.t) :
              a Js.Promise.t ->
           [%e pexp_match ~loc [%expr route] cases]]
 
@@ -46,8 +65,4 @@ let derive_router_td td =
   let _param, ctors = extract td in
   [ Derive_href.derive td ctors; derive_decode_response td _param ctors ]
 
-let expand_response ~ctxt =
-  let loc = Expansion_context.Extension.extension_point_loc ctxt in
-  [%type: Fetch.Response.t]
-
-let () = register () ~derive:derive_router_td ~expand_response
+let () = register () ~derive:derive_router_td

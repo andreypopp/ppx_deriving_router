@@ -4,9 +4,17 @@ open Ast_builder.Default
 open Ppx_router_common
 open Expansion_helpers
 
-let derive_path_name (ctor : ctor) =
-  let name = ctor.ctor.pcd_name.txt in
+let derive_path_name ctor =
+  let name = ctor.pcd_name.txt in
   mangle (Prefix "path") name
+
+let routes_name = mangle_type_decl (Suffix "routes")
+let routes_name_lid = mangle_lid (Suffix "routes")
+let handle_name = mangle_type_decl (Suffix "handle")
+let packed_name = mangle_type_decl (Prefix "packed")
+let handler_name = mangle_type_decl (Prefix "handler")
+let packed_ctor_name = mangle_type_decl (Prefix "Packed")
+let packed_ctor_name_lid = mangle_lid (Prefix "Packed")
 
 let td_to_ty_handler param td =
   let loc = td.ptype_loc in
@@ -34,11 +42,52 @@ let td_to_ty_enc param td =
     | None -> [%type: Dream.response]
     | Some param -> param
   in
-  [%type: [%t result] -> Dream.response Lwt.t]
+  [%type: [%t result] Ppx_router_runtime.encode]
 
-let derive_path (ctor, ctors) =
+let derive_mount td m =
+  let loc = m.m_ctor.pcd_loc in
+  let name = derive_path_name m.m_ctor in
+  let pat = pvar ~loc name in
+  let expr =
+    let routes =
+      evar ~loc (Longident.name (routes_name_lid m.m_typ.txt))
+    in
+    let p inner =
+      ppat_construct ~loc
+        { loc; txt = packed_ctor_name_lid m.m_typ.txt }
+        (Some inner)
+    in
+    let make =
+      pexp_construct ~loc
+        { loc; txt = Lident m.m_ctor.pcd_name.txt }
+        (Some [%expr x])
+    in
+    let make_with_encode encode =
+      pexp_construct ~loc
+        { loc; txt = Lident (packed_ctor_name td) }
+        (Some [%expr [%e make], [%e encode]])
+    in
+    let encode =
+      match m.m_response with
+      | `passthrough -> [%expr _encode]
+      | `response -> [%expr Ppx_router_runtime.Encode_raw]
+    in
+    [%expr
+      Stdlib.List.map
+        (fun route ->
+          let f f req =
+            let [%p p [%pat? x, _encode]] = f req in
+            [%e make_with_encode encode]
+          in
+          Ppx_router_runtime.prefix_route [%e estring ~loc m.m_prefix] f
+            route)
+        [%e routes]]
+  in
+  value_binding ~loc ~pat ~expr
+
+let derive_path td (ctor, ctors) =
   let loc = ctor.ctor.pcd_loc in
-  let name = derive_path_name ctor in
+  let name = derive_path_name ctor.ctor in
   let body =
     match ctor.path with
     | [] -> [%expr Routes.nil]
@@ -116,15 +165,16 @@ let derive_path (ctor, ctors) =
           let expr = pexp_construct ~loc lname args in
           let to_response =
             match ctor.response with
-            | None -> [%expr Lwt.return]
-            | Some [%type: Dream.response] -> [%expr Lwt.return]
-            | Some t ->
-                [%expr
-                  fun v ->
-                    Dream.json
-                      (Yojson.Basic.to_string ([%to_json: [%t t]] v))]
+            | `response -> [%expr Ppx_router_runtime.Encode_raw]
+            | `json_response t ->
+                [%expr Ppx_router_runtime.Encode_json [%to_json: [%t t]]]
           in
-          (pat --> [%expr P ([%e expr], [%e to_response])]) :: cases)
+          let expr =
+            pexp_construct ~loc
+              { loc; txt = Lident (packed_ctor_name td) }
+              (Some [%expr [%e expr], [%e to_response]])
+          in
+          (pat --> expr) :: cases)
     in
     let make =
       [%expr
@@ -135,60 +185,127 @@ let derive_path (ctor, ctors) =
         pexp_fun ~loc Nolabel None (pvar ~loc param) body)
   in
   let pat = pvar ~loc name in
-  let expr = [%expr Routes.route [%e body] [%e make]] in
+  let expr =
+    [%expr
+      [ Ppx_router_runtime.Route ([%e body], [%e make], Stdlib.Fun.id) ]]
+  in
   value_binding ~loc ~pat ~expr
 
-let derive_router td ctors =
+let derive_routes td ctors mounts =
   let loc = td.ptype_loc in
-  let paths = List.rev_map ctors ~f:derive_path in
-  pexp_let ~loc Nonrecursive paths
+  pexp_let ~loc Nonrecursive
+    (let paths = List.rev_map ctors ~f:(derive_path td) in
+     let mounts = List.rev_map mounts ~f:(derive_mount td) in
+     paths @ mounts)
     (let loc = td.ptype_loc in
      let paths =
        List.map ctors ~f:(fun (ctor, _ctors) ->
-           let name = derive_path_name ctor in
+           let name = derive_path_name ctor.ctor in
            let loc = ctor.ctor.pcd_loc in
            evar ~loc name)
      in
-     [%expr Ppx_router_runtime.make (Routes.one_of [%e elist ~loc paths])])
+     let mounts =
+       List.map mounts ~f:(fun m ->
+           let name = derive_path_name m.m_ctor in
+           let loc = m.m_ctor.pcd_loc in
+           evar ~loc name)
+     in
+     [%expr Stdlib.List.flatten [%e elist ~loc (paths @ mounts)]])
 
 let derive_router_td td =
   let param, ctors = extract td in
-  let ctors_by_path =
-    List.group_by ~eq:equal_route_by_path ~hash:hash_route_by_path ctors
+  let leafs, mounts =
+    List.partition_filter_map ctors ~f:(function
+      | Leaf x -> `Left x
+      | Mount x -> `Right x)
+  in
+  let leafs =
+    List.group_by ~eq:equal_route_by_path ~hash:hash_route_by_path leafs
     |> List.map ~f:(fun ctors ->
            let ctor = List.hd ctors in
            ctor, ctors)
   in
   let loc = td.ptype_loc in
-  let router_name = mangle_type_decl (Suffix "router") td in
-  let handle_name = mangle_type_decl (Suffix "handle") td in
-  Derive_href.derive td ctors
-  :: [%str
-       type handler = { f : [%t td_to_ty_handler param td] }
+  let packed_ty =
+    ptyp_constr ~loc { loc; txt = Lident (packed_name td) } []
+  in
+  let packed_stri =
+    pstr_type ~loc Recursive
+      [
+        type_declaration ~loc
+          ~name:{ txt = packed_name td; loc }
+          ~params:[] ~cstrs:[]
+          ~kind:
+            (Ptype_variant
+               [
+                 {
+                   pcd_name = { txt = packed_ctor_name td; loc };
+                   pcd_args =
+                     Pcstr_tuple
+                       [ td_to_ty param td; td_to_ty_enc param td ];
+                   pcd_res = Some packed_ty;
+                   pcd_loc = loc;
+                   pcd_vars = [];
+                   pcd_attributes = [];
+                 };
+               ])
+          ~private_:Public ~manifest:None;
+      ]
+  in
+  let handler_stri =
+    pstr_type ~loc Recursive
+      [
+        type_declaration ~loc
+          ~name:{ txt = handler_name td; loc }
+          ~params:[] ~cstrs:[]
+          ~kind:
+            (Ptype_record
+               [
+                 {
+                   pld_name = { txt = "f"; loc };
+                   pld_mutable = Immutable;
+                   pld_type = td_to_ty_handler param td;
+                   pld_loc = loc;
+                   pld_attributes = [];
+                 };
+               ])
+          ~private_:Public ~manifest:None;
+      ]
+  in
 
-       let [%p pvar ~loc handle_name] =
-         let open struct
-           type p =
-             | P :
-                 [%t td_to_ty param td] * [%t td_to_ty_enc param td]
-                 -> p
+  [%str
+    [%%i Derive_href.derive td ctors]
+    [%%i packed_stri]
+    [%%i handler_stri]
 
-           let [%p pvar ~loc router_name] =
-             [%e derive_router td ctors_by_path]
-         end in
-         fun ({ f } : handler) ->
-           Ppx_router_runtime.handle [%e evar ~loc router_name]
-             (fun (P (p, to_response)) req ->
-               Lwt.bind (f p req) to_response)
+    let [%p pvar ~loc (routes_name td)] =
+      [%e derive_routes td leafs mounts]
 
-       let [%p pvar ~loc handle_name] =
-         [%e
-           match param with
-           | Some _ -> evar ~loc handle_name
-           | None -> [%expr fun f -> [%e evar ~loc handle_name] { f }]]]
+    let [%p pvar ~loc (handle_name td)] =
+      let router =
+        Ppx_router_runtime.make
+          (let routes =
+             Stdlib.List.map Ppx_router_runtime.to_route
+               [%e evar ~loc (routes_name td)]
+           in
+           Routes.one_of routes)
+      in
+      fun ({ f } :
+            [%t
+              ptyp_constr ~loc { loc; txt = Lident (handler_name td) } []]) ->
+        Ppx_router_runtime.handle router
+          (fun
+            [%p
+              ppat_construct ~loc
+                { loc; txt = Lident (packed_ctor_name td) }
+                (Some [%pat? p, encode])]
+            req
+          -> Lwt.bind (f p req) (Ppx_router_runtime.encode encode))
 
-let expand_response ~ctxt =
-  let loc = Expansion_context.Extension.extension_point_loc ctxt in
-  [%type: Dream.response]
+    let [%p pvar ~loc (handle_name td)] =
+      [%e
+        match param with
+        | Some _ -> evar ~loc (handle_name td)
+        | None -> [%expr fun f -> [%e evar ~loc (handle_name td)] { f }]]]
 
-let () = register () ~derive:derive_router_td ~expand_response
+let () = register () ~derive:derive_router_td

@@ -47,3 +47,5 @@ let encode_query_key out x =
 
 let encode_query_value out x =
   Buffer.add_string out (Js.Global.encodeURIComponent x)
+
+type response = Fetch.Response.t

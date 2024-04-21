@@ -36,6 +36,13 @@ module Api = struct
     | List_users : user list t [@GET "/"]
     | Create_user : user t [@POST "/"]
     | Get_user : { id : int } -> user t [@GET "/:id"]
-      | Raw_response : [%response] t [@GET "/raw-response"]
+    | Raw_response : Ppx_router_runtime.response t [@GET "/raw-response"]
+  [@@deriving router]
+end
+
+module All = struct
+  type _ t =
+    | Pages : Pages.t -> Ppx_router_runtime.response t
+    | Api : 'a Api.t -> 'a t
   [@@deriving router]
 end

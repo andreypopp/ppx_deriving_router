@@ -15,7 +15,7 @@
  (modes melange)
  (modules ppx_router_runtime)
  (public_name ppx_router.browser_runtime)
- (libraries))
+ (libraries melange-fetch))
 
 (executable
  (name ppx_router_test)

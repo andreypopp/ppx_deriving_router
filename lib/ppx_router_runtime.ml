@@ -51,6 +51,28 @@ let encode_query_value out x =
 exception Method_not_allowed
 exception Invalid_query_parameter of string * string list
 
+type 'v route =
+  | Route : ('a, 'v) Routes.path * 'a * ('v -> 'w) -> 'w route
+
+let prefix_route prefix f (Route (path, a, g)) =
+  Route (Routes.(s prefix /~ path), a, fun x -> f (g x))
+
+let to_route (Route (path, a, f)) = Routes.(map f (route path a))
+
+type json = Ppx_deriving_json_runtime.t
+type response = Dream.response
+
+type _ encode =
+  | Encode_raw : response encode
+  | Encode_json : ('a -> json) -> 'a encode
+
+let encode : type a. a encode -> a -> Dream.response Lwt.t =
+ fun enc x ->
+  match enc, x with
+  | Encode_raw, x -> Lwt.return x
+  | Encode_json to_json, x ->
+      Dream.json (Yojson.Basic.to_string (to_json x))
+
 type 'a router = (Dream.request -> 'a) Routes.router
 
 let make x = x

@@ -6,6 +6,9 @@
   /Route_with_implicit_path?param=ok
   /hello/world
   /hello/world?modifier=uppercase
+  /121
+  /Pages/hello/world
+  /Api/121
   # TESTING ROUTE MATCHING GENERATION
   ## GET /
   HOME PAGE
@@ -32,3 +35,12 @@
   {"id":121}
   ## GET /raw-response
   RAW RESPONSE
+  # TESTING ROUTE MATCHING GENERATION (ALL)
+  ## GET /Pages/hello/world
+  Hello, world!
+  ## GET /Pages/
+  HOME PAGE
+  ## GET /Pages
+  HOME PAGE
+  ## GET /Api/121
+  {"id":121}

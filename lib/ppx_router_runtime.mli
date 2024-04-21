@@ -1,3 +1,5 @@
+(** REQUEST DECODING *)
+
 type 'a url_path_encoder = 'a -> string
 type 'a url_path_decoder = string -> 'a option
 type 'a url_query_encoder = 'a -> string list
@@ -31,18 +33,30 @@ val encode_query_value : Buffer.t -> string -> unit
 exception Method_not_allowed
 exception Invalid_query_parameter of string * string list
 
+(** RESPONSE ENCODING *)
+
+type json = Ppx_deriving_json_runtime.t
+type response = Dream.response
+
+type _ encode =
+  | Encode_raw : response encode
+  | Encode_json : ('a -> json) -> 'a encode
+
+val encode : 'a. 'a encode -> 'a -> response Lwt.t
+
+(** ROUTING *)
+
+type 'v route =
+  | Route : ('a, 'v) Routes.path * 'a * ('v -> 'w) -> 'w route
+
+val prefix_route : string -> ('a -> 'b) -> 'a route -> 'b route
+val to_route : 'a route -> 'a Routes.route
+
+(** ROUTER *)
+
 type 'a router
 
 val make : (Dream.request -> 'a) Routes.router -> 'a router
 
 val handle : 'a router -> ('a -> Dream.handler) -> Dream.handler
 (** handle request given a router and a dispatcher *)
-
-val route :
-  'a router ->
-  Dream.request ->
-  [ `Ok of 'a
-  | `Not_found
-  | `Method_not_allowed
-  | `Invalid_query_parameter of string * string list ]
-(** route request given a router *)

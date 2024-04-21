@@ -16,7 +16,17 @@ end = struct
     Route.decode_response route response
 end
 
-module Fetch = Make_fetch (Api)
+module Test_composition = struct
+  open Ppx_router_runtime.Types
+  open Ppx_deriving_json_runtime.Primitives
+
+  type _ x = Home : int x | About : string x [@@deriving router]
+
+  type _ t = Pages : 'a x -> 'a t | Api : { id : string } -> int t
+  [@@deriving router]
+end
+
+module Fetch = Make_fetch (All)
 
 let test () =
   print_endline "# TESTING HREF GENERATION";
@@ -28,7 +38,7 @@ let test () =
   print_endline
     (Pages.href (Hello { name = "world"; modifier = Some Uppercase }))
 
-let fetch_and_log req =
+let fetch_and_log (req : _ All.t) =
   ignore
     ( Fetch.fetch ~root:"http://localhost:8080" req >>= fun user ->
       Js.log user;
@@ -40,8 +50,8 @@ let () =
       prerr_endline "missing subcommand";
       exit 1
   | "test" -> test ()
-  | "get_user" -> fetch_and_log (Get_user { id = 121 })
-  | "raw" -> fetch_and_log Raw_response
+  | "get_user" -> fetch_and_log (Api (Get_user { id = 121 }))
+  | "raw" -> fetch_and_log (Api Raw_response)
   | _ ->
       prerr_endline "unknown subcommand";
       exit 1
