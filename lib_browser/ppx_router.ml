@@ -63,6 +63,10 @@ let derive_decode_response td param ctors =
 
 let derive_router_td td =
   let _param, ctors = extract td in
-  [ Derive_href.derive td ctors; derive_decode_response td _param ctors ]
+  [
+    Derive_href.derive td ctors;
+    Derive_method.derive td ctors;
+    derive_decode_response td _param ctors;
+  ]
 
 let () = register () ~derive:derive_router_td

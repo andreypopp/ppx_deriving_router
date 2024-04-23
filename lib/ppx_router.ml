@@ -279,6 +279,7 @@ let derive_router_td td =
 
   [%str
     [%%i Derive_href.derive td ctors]
+    [%%i Derive_method.derive td ctors]
     [%%i packed_stri]
     [%%i handler_stri]
 

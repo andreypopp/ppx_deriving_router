@@ -139,8 +139,11 @@ let pat_ctor ctor x =
 
 let match_ctor ctor =
   let loc = ctor.pcd_loc in
-  let px, x = patt_and_expr ~loc (gen_symbol ~prefix:"x" ()) in
-  pat_ctor ctor (Some px), x
+  let px, x = patt_and_expr ~loc (gen_symbol ~prefix:"_x" ()) in
+  let arg =
+    match ctor.pcd_args with Pcstr_tuple [] -> None | _ -> Some px
+  in
+  pat_ctor ctor arg, x
 
 let extract_mount_response = function
   | None -> `response
@@ -378,26 +381,29 @@ module Derive_href = struct
         | [] -> body
         | bnds -> pexp_let ~loc Nonrecursive bnds body)
 
+  let td_newtype td ret_ty =
+    let loc = td.ptype_loc in
+    let name = td.ptype_name.txt in
+    let vs =
+      List.map td.ptype_params ~f:(fun _ -> gen_symbol ~prefix:"t" ())
+    in
+    let t =
+      ptyp_constr ~loc
+        { txt = Lident name; loc }
+        (List.map vs ~f:(fun txt ->
+             ptyp_constr ~loc { txt = Lident txt; loc } []))
+    in
+    let t = [%type: [%t t] -> [%t ret_ty]] in
+    let we e =
+      List.fold_left vs ~init:e ~f:(fun acc txt ->
+          pexp_newtype ~loc { txt; loc } acc)
+    in
+    t, we
+
   let derive td (routes : route list) =
     let loc = td.ptype_loc in
     let name = td.ptype_name.txt in
-    let t, we =
-      let vs =
-        List.map td.ptype_params ~f:(fun _ -> gen_symbol ~prefix:"t" ())
-      in
-      let t =
-        ptyp_constr ~loc
-          { txt = Lident name; loc }
-          (List.map vs ~f:(fun txt ->
-               ptyp_constr ~loc { txt = Lident txt; loc } []))
-      in
-      let t = [%type: [%t t] -> string] in
-      let we e =
-        List.fold_left vs ~init:e ~f:(fun acc txt ->
-            pexp_newtype ~loc { txt; loc } acc)
-      in
-      t, we
-    in
+    let t, we = td_newtype td [%type: string] in
     let name = mangle (Suffix "href") name in
     let cases =
       List.map routes ~f:(function
@@ -438,4 +444,39 @@ module Derive_href = struct
     [%stri
       let [%p pvar ~loc name] =
         [%e we [%expr ([%e pexp_function ~loc cases] : [%t t])]]]
+end
+
+module Derive_method = struct
+  let derive td (routes : route list) =
+    let loc = td.ptype_loc in
+    let name = td.ptype_name.txt in
+    let t, we =
+      Derive_href.td_newtype td [%type: [ `GET | `POST | `PUT | `DELETE ]]
+    in
+    let name = mangle (Suffix "http_method") name in
+    let cases =
+      List.map routes ~f:(function
+        | Mount m ->
+            let loc = m.m_ctor.pcd_loc in
+            let p, x = match_ctor m.m_ctor in
+            let f =
+              evar ~loc
+                (Longident.name
+                   (mangle_lid (Suffix "http_method") m.m_typ.txt))
+            in
+            p --> [%expr [%e f] [%e x]]
+        | Leaf c ->
+            let loc = c.ctor.pcd_loc in
+            let p, _x = match_ctor c.ctor in
+            let e =
+              match c.method_ with
+              | `PUT -> [%expr `PUT]
+              | `GET -> [%expr `GET]
+              | `POST -> [%expr `POST]
+              | `DELETE -> [%expr `DELETE]
+            in
+            p --> e)
+    in
+    let e = we [%expr ([%e pexp_function ~loc cases] : [%t t])] in
+    [%stri let [%p pvar ~loc name] = [%e e]]
 end

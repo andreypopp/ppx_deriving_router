@@ -226,7 +226,38 @@ For that, one should use `ppx_router.browser` ppx in `dune` file:
 For Melange the ppx will emit:
 ```ocaml
 val href : 'a t -> string
+val http_method : _ t -> [ `DELETE | `GET | `POST | `PUT ]
 val decode_response : 'a t -> Fetch.Response.t -> 'a Js.Promise.t
+```
+
+Then the following code could be used to generate a typesafe client from a
+routes definition:
+```ocaml
+module Make_fetch (Route : sig
+  type 'a t
+
+  val http_method : 'a t -> [ `GET | `POST | `PUT | `DELETE ]
+  val href : 'a t -> string
+  val decode_response : 'a t -> Fetch.Response.t -> 'a Js.Promise.t
+end) : sig
+  val fetch : root:string -> 'a Route.t -> 'a Js.Promise.t
+end = struct
+  let fetch ~root route =
+    let href = root ^ Route.href route in
+    let init =
+      let method_ =
+        match Route.http_method route with
+        | `GET -> Fetch.Get
+        | `POST -> Fetch.Post
+        | `PUT -> Fetch.Put
+        | `DELETE -> Fetch.Delete
+      in
+      Fetch.RequestInit.make ~method_ ()
+    in
+    let req = Fetch.Request.makeWithInit href init in
+    Fetch.fetchWithRequest req >>= fun response ->
+    Route.decode_response route response
+end
 ```
 
 Note that if routes mention `Dream.response` in its response parameter then it

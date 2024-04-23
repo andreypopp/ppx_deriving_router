@@ -5,6 +5,7 @@ let ( >>= ) p f = Js.Promise.then_ f p
 module Make_fetch (Route : sig
   type 'a t
 
+  val http_method : 'a t -> [ `GET | `POST | `PUT | `DELETE ]
   val href : 'a t -> string
   val decode_response : 'a t -> Fetch.Response.t -> 'a Js.Promise.t
 end) : sig
@@ -12,7 +13,18 @@ end) : sig
 end = struct
   let fetch ~root route =
     let href = root ^ Route.href route in
-    Fetch.fetch href >>= fun response ->
+    let init =
+      let method_ =
+        match Route.http_method route with
+        | `GET -> Fetch.Get
+        | `POST -> Fetch.Post
+        | `PUT -> Fetch.Put
+        | `DELETE -> Fetch.Delete
+      in
+      Fetch.RequestInit.make ~method_ ()
+    in
+    let req = Fetch.Request.makeWithInit href init in
+    Fetch.fetchWithRequest req >>= fun response ->
     Route.decode_response route response
 end
 
