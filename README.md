@@ -173,16 +173,25 @@ have API and non API routes together.
 
 ## Using with Melange
 
-`ppx_router` can be used with Melange, in this case it'll only emit code for
-link generation (only `href` function will be generated).
+`ppx_router` can be used with Melange, 
 
-To use `ppx_router` with Melange, one should use `ppx_router.browser` ppx, in
-`dune` file:
+For that, one should use `ppx_router.browser` ppx in `dune` file:
 ```
 (...
  (preprocess (pps ppx_router.browser))
  ...)
 ```
+
+For Melange the ppx will emit:
+```ocaml
+val href : 'a t -> string
+val decode_response : 'a t -> Fetch.Response.t -> 'a Js.Promise.t
+```
+
+Note that if routes mention `Dream.response` in its response parameter then it
+won't compile with Melange (because Dream is not available for Melange). For
+that one should use `Ppx_router_runtime.response` type instead which is an
+alias for `Dream.response` in native and for `Fetch.Response.t` in Melange.
 
 The common setup is to define routes in a separate dune library which is
 compiled both for native and for browser.
