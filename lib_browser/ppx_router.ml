@@ -34,13 +34,13 @@ let derive_decode_response td param ctors =
               p --> [%expr [%e next] [%e x] response]
           | Leaf ctor ->
               let arg =
-                match ctor.ctor.pcd_args with
+                match ctor.l_ctor.pcd_args with
                 | Pcstr_tuple [] -> None
                 | _ -> Some (ppat_any ~loc)
               in
-              let p = pat_ctor ctor.ctor arg in
+              let p = pat_ctor ctor.l_ctor arg in
               let e =
-                match ctor.response with
+                match ctor.l_response with
                 | `response -> [%expr Js.Promise.resolve response]
                 | `json_response t ->
                     [%expr

@@ -25,18 +25,18 @@ let collect_params_rev ~loc:_ uri =
   in
   aux [] (Uri.path uri |> String.split_on_char ~by:'/')
 
-type ctor = {
-  ctor : constructor_declaration;
-  method_ : method_;
-  path : path;
-  query : (string * core_type) list;
-  response : [ `response | `json_response of core_type ];
+type leaf = {
+  l_ctor : constructor_declaration;
+  l_method_ : method_;
+  l_path : path;
+  l_query : (string * core_type) list;
+  l_response : [ `response | `json_response of core_type ];
 }
 
 and path = path_segment list
 and path_segment = Ppath of string | Pparam of string * core_type
 
-type route = Leaf of ctor | Mount of mount
+type route = Leaf of leaf | Mount of mount
 
 and mount = {
   m_prefix : string option;
@@ -55,18 +55,19 @@ let equal_path : path Equal.t =
   in
   Equal.list eq_param
 
-let equal_route_by_path_method : ctor Equal.t =
- fun a b -> Equal.poly a.method_ b.method_ && equal_path a.path b.path
+let equal_route_by_path_method : leaf Equal.t =
+ fun a b ->
+  Equal.poly a.l_method_ b.l_method_ && equal_path a.l_path b.l_path
 
-let equal_route_by_path : ctor Equal.t =
- fun a b -> equal_path a.path b.path
+let equal_route_by_path : leaf Equal.t =
+ fun a b -> equal_path a.l_path b.l_path
 
-let hash_route_by_path : ctor Hash.t =
- fun ctor ->
+let hash_route_by_path : leaf Hash.t =
+ fun leaf ->
   Hash.list
     (function
       | Pparam _ -> 0 | Ppath x -> Hash.combine2 1 (Hash.string x))
-    ctor.path
+    leaf.l_path
 
 let declare_router_attr method_ =
   let name = Printf.sprintf "router.%s" (method_to_string method_) in
@@ -85,8 +86,8 @@ let attr_PUT = declare_router_attr `PUT
 let attr_DELETE = declare_router_attr `DELETE
 let attrs = [ attr_GET; attr_POST; attr_PUT; attr_DELETE ]
 
-let attr_path =
-  let name = "router.path" in
+let attr_prefix =
+  let name = "router.prefix" in
   let pattern =
     let open Ast_pattern in
     single_expr_payload (estring __')
@@ -212,7 +213,7 @@ let extract td =
         match kind with
         | `mount (m_typ, m_typ_param) ->
             let m_prefix =
-              match Attribute.get attr_path ctor with
+              match Attribute.get attr_prefix ctor with
               | None -> Some ctor.pcd_name.txt
               | Some path -> (
                   let path = path.txt in
@@ -237,7 +238,7 @@ let extract td =
                       let uri = Uri.of_string uri.txt in
                       Some (method_, Some uri))
             in
-            let method_, uri =
+            let l_method_, uri =
               match info with
               | None -> `GET, Uri.of_string ("/" ^ ctor.pcd_name.txt)
               | Some (method_, Some uri) -> method_, uri
@@ -258,15 +259,15 @@ let extract td =
               | Some typ -> typ
             in
             let path = List.rev (collect_params_rev ~loc uri) in
-            let path =
+            let l_path =
               List.map path ~f:(function
                 | `path x -> Ppath x
                 | `param x -> Pparam (x, resolve_type x))
             in
-            let query =
+            let l_query =
               List.filter_map lds ~f:(fun ld ->
                   let is_path_param =
-                    List.exists path ~f:(function
+                    List.exists l_path ~f:(function
                       | Pparam (name, _) ->
                           String.equal name ld.pld_name.txt
                       | Ppath _ -> false)
@@ -274,20 +275,22 @@ let extract td =
                   if is_path_param then None
                   else Some (ld.pld_name.txt, ld.pld_type))
             in
-            let response = extract_leaf_response ctor.pcd_res in
-            let ctor = { ctor; method_; path; query; response } in
+            let l_response = extract_leaf_response ctor.pcd_res in
+            let leaf =
+              { l_ctor = ctor; l_method_; l_path; l_query; l_response }
+            in
             (match
                List.find_map ctors ~f:(function
-                 | Leaf x when equal_route_by_path_method ctor x -> Some x
+                 | Leaf x when equal_route_by_path_method leaf x -> Some x
                  | Leaf _ | Mount _ -> None)
              with
             | None -> ()
             | Some conflict ->
                 Location.raise_errorf ~loc
                   "route %s %s is already defined in %s constructor"
-                  (method_to_string method_)
-                  (Uri.path uri) conflict.ctor.pcd_name.txt);
-            Leaf ctor :: ctors)
+                  (method_to_string l_method_)
+                  (Uri.path uri) conflict.l_ctor.pcd_name.txt);
+            Leaf leaf :: ctors)
   in
   param, List.rev ctors
 
@@ -426,20 +429,20 @@ module Derive_href = struct
                     [%e x]]
             in
             p --> e
-        | Leaf ctor -> (
-            let loc = ctor.ctor.pcd_loc in
+        | Leaf leaf -> (
+            let loc = leaf.l_ctor.pcd_loc in
             let has_params =
-              List.exists ctor.path ~f:(function
+              List.exists leaf.l_path ~f:(function
                 | Pparam _ -> true
                 | _ -> false)
             in
-            match has_params, ctor.query with
+            match has_params, leaf.l_query with
             | false, [] ->
-                let p = pat_ctor ctor.ctor None in
-                p --> case ~loc ctor.path [] [%expr assert false]
+                let p = pat_ctor leaf.l_ctor None in
+                p --> case ~loc leaf.l_path [] [%expr assert false]
             | _, query ->
-                let p, x = match_ctor ctor.ctor in
-                p --> case ~loc ctor.path query x))
+                let p, x = match_ctor leaf.l_ctor in
+                p --> case ~loc leaf.l_path query x))
     in
     [%stri
       let [%p pvar ~loc name] =
@@ -466,10 +469,10 @@ module Derive_method = struct
             in
             p --> [%expr [%e f] [%e x]]
         | Leaf c ->
-            let loc = c.ctor.pcd_loc in
-            let p, _x = match_ctor c.ctor in
+            let loc = c.l_ctor.pcd_loc in
+            let p, _x = match_ctor c.l_ctor in
             let e =
-              match c.method_ with
+              match c.l_method_ with
               | `PUT -> [%expr `PUT]
               | `GET -> [%expr `GET]
               | `POST -> [%expr `POST]

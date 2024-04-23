@@ -179,7 +179,7 @@ constructor, consider the example:
 module Routes = struct
 
   type _ t =
-    | Pages : Pages.t -> Dream.response t [@path "/"]
+    | Pages : Pages.t -> Dream.response t [@prefix "/"]
     | Api : 'a Api.t -> 'a t
   [@@deriving router]
 end
@@ -193,7 +193,7 @@ let () =
   assert (Routes.href (Api (Get_user {id=1})) = "/Api/1");
 ```
 
-Notice how `[@path]` attribute is used to specify the path for the routes
+Notice how `[@prefix]` attribute is used to specify the path for the routes
 prefix (in its absence the path will be equal to the coresponding constructor
 name).
 

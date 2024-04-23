@@ -90,10 +90,10 @@ let derive_mount td m =
   value_binding ~loc ~pat ~expr
 
 let derive_path td (ctor, ctors) =
-  let loc = ctor.ctor.pcd_loc in
-  let name = derive_path_name ctor.ctor in
+  let loc = ctor.l_ctor.pcd_loc in
+  let name = derive_path_name ctor.l_ctor in
   let body =
-    match ctor.path with
+    match ctor.l_path with
     | [] -> [%expr Routes.nil]
     | init :: params ->
         let body =
@@ -114,7 +114,7 @@ let derive_path td (ctor, ctors) =
   in
   let make =
     let params =
-      List.filter ctor.path ~f:(function
+      List.filter ctor.l_path ~f:(function
         | Pparam _ -> true
         | Ppath _ -> false)
       |> List.mapi ~f:(fun idx _ -> Printf.sprintf "_param%d" idx)
@@ -128,13 +128,13 @@ let derive_path td (ctor, ctors) =
         ]
       in
       List.fold_left ctors ~init ~f:(fun cases ctor ->
-          let loc = ctor.ctor.pcd_loc in
-          let name = ctor.ctor.pcd_name.txt in
-          let method_ = method_to_string ctor.method_ in
+          let loc = ctor.l_ctor.pcd_loc in
+          let name = ctor.l_ctor.pcd_name.txt in
+          let method_ = method_to_string ctor.l_method_ in
           let pat = ppat_variant ~loc method_ None in
           let lname = { loc; txt = Lident name } in
           let path_params =
-            List.filter_map ctor.path ~f:(function
+            List.filter_map ctor.l_path ~f:(function
               | Pparam (name, _) -> Some name
               | Ppath _ -> None)
           in
@@ -144,7 +144,7 @@ let derive_path td (ctor, ctors) =
           in
           let args =
             args
-            @ List.filter_map ctor.query ~f:(fun (name, typ) ->
+            @ List.filter_map ctor.l_query ~f:(fun (name, typ) ->
                   let field_name = { loc; txt = Lident name } in
                   let of_url = derive_conv "of_url_query" typ in
                   let value =
@@ -168,7 +168,7 @@ let derive_path td (ctor, ctors) =
           in
           let expr = pexp_construct ~loc lname args in
           let to_response =
-            match ctor.response with
+            match ctor.l_response with
             | `response -> [%expr Ppx_router_runtime.Encode_raw]
             | `json_response t ->
                 [%expr Ppx_router_runtime.Encode_json [%to_json: [%t t]]]
@@ -204,8 +204,8 @@ let derive_routes td ctors mounts =
     (let loc = td.ptype_loc in
      let paths =
        List.map ctors ~f:(fun (ctor, _ctors) ->
-           let name = derive_path_name ctor.ctor in
-           let loc = ctor.ctor.pcd_loc in
+           let name = derive_path_name ctor.l_ctor in
+           let loc = ctor.l_ctor.pcd_loc in
            evar ~loc name)
      in
      let mounts =
