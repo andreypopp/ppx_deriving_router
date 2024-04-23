@@ -238,8 +238,9 @@ For that, one should use `ppx_deriving_router.browser` ppx in `dune` file:
 
 For Melange the ppx will emit:
 ```ocaml
-val href : 'a t -> string
 val http_method : _ t -> [ `DELETE | `GET | `POST | `PUT ]
+val href : 'a t -> string
+val body : 'a t -> string option
 val decode_response : 'a t -> Fetch.Response.t -> 'a Js.Promise.t
 ```
 
@@ -251,6 +252,7 @@ module Make_fetch (Route : sig
 
   val http_method : 'a t -> [ `GET | `POST | `PUT | `DELETE ]
   val href : 'a t -> string
+  val body : 'a t -> string option
   val decode_response : 'a t -> Fetch.Response.t -> 'a Js.Promise.t
 end) : sig
   val fetch : root:string -> 'a Route.t -> 'a Js.Promise.t
@@ -265,7 +267,8 @@ end = struct
         | `PUT -> Fetch.Put
         | `DELETE -> Fetch.Delete
       in
-      Fetch.RequestInit.make ~method_ ()
+      let body = Option.map Fetch.BodyInit.make (Route.body route) in
+      Fetch.RequestInit.make ~method_ ?body ()
     in
     let req = Fetch.Request.makeWithInit href init in
     Fetch.fetchWithRequest req >>= fun response ->
