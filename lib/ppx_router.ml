@@ -79,8 +79,12 @@ let derive_mount td m =
             let [%p p [%pat? x, _encode]] = f req in
             [%e make_with_encode encode]
           in
-          Ppx_router_runtime.prefix_route [%e estring ~loc m.m_prefix] f
-            route)
+          Ppx_router_runtime.prefix_route
+            [%e
+              match m.m_prefix with
+              | Some p -> [%expr Some [%e estring ~loc p]]
+              | None -> [%expr None]]
+            f route)
         [%e routes]]
   in
   value_binding ~loc ~pat ~expr

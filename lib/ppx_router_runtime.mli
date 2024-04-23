@@ -42,14 +42,14 @@ type _ encode =
   | Encode_raw : response encode
   | Encode_json : ('a -> json) -> 'a encode
 
-val encode : 'a. 'a encode -> 'a -> response Lwt.t
+val encode : 'a encode -> 'a -> response Lwt.t
 
 (** ROUTING *)
 
 type 'v route =
   | Route : ('a, 'v) Routes.path * 'a * ('v -> 'w) -> 'w route
 
-val prefix_route : string -> ('a -> 'b) -> 'a route -> 'b route
+val prefix_route : string option -> ('a -> 'b) -> 'a route -> 'b route
 val to_route : 'a route -> 'a Routes.route
 
 (** ROUTER *)
@@ -60,3 +60,11 @@ val make : (Dream.request -> 'a) Routes.router -> 'a router
 
 val handle : 'a router -> ('a -> Dream.handler) -> Dream.handler
 (** handle request given a router and a dispatcher *)
+
+val dispatch :
+  'a router ->
+  Dream.request ->
+  [> `Invalid_query_parameter of string * string list
+  | `Method_not_allowed
+  | `Not_found
+  | `Ok of 'a ]

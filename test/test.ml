@@ -79,10 +79,9 @@ let test () =
   test_req api_handler `GET "/121";
   test_req api_handler `GET "/raw-response";
   print_endline "# TESTING ROUTE MATCHING GENERATION (ALL)";
-  test_req all_handler `GET "/Pages/hello/world";
-  test_req all_handler `GET "/Pages/";
-  test_req all_handler `GET "/Pages";
-  test_req all_handler `GET "/Api/121"
+  test_req all_handler `GET "/hello/world";
+  test_req all_handler `GET "/";
+  test_req all_handler `GET "/api/121"
 
 let () =
   match Sys.argv.(1) with

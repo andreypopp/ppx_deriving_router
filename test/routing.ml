@@ -42,7 +42,7 @@ end
 
 module All = struct
   type _ t =
-    | Pages : Pages.t -> Ppx_router_runtime.response t
-    | Api : 'a Api.t -> 'a t
+    | Pages : Pages.t -> Ppx_router_runtime.response t [@path "/"]
+    | Api : 'a Api.t -> 'a t [@path "/api"]
   [@@deriving router]
 end

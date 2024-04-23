@@ -55,7 +55,9 @@ type 'v route =
   | Route : ('a, 'v) Routes.path * 'a * ('v -> 'w) -> 'w route
 
 let prefix_route prefix f (Route (path, a, g)) =
-  Route (Routes.(s prefix /~ path), a, fun x -> f (g x))
+  match prefix with
+  | None -> Route (path, a, fun x -> f (g x))
+  | Some prefix -> Route (Routes.(s prefix /~ path), a, fun x -> f (g x))
 
 let to_route (Route (path, a, f)) = Routes.(map f (route path a))
 
@@ -77,7 +79,7 @@ type 'a router = (Dream.request -> 'a) Routes.router
 
 let make x = x
 
-let route (router : _ router) req =
+let dispatch (router : _ router) req =
   let target = Dream.target req in
   match Routes.match' router ~target with
   | Routes.FullMatch v | Routes.MatchWithTrailingSlash v -> (
@@ -89,7 +91,7 @@ let route (router : _ router) req =
   | Routes.NoMatch -> `Not_found
 
 let handle (router : _ router) f req =
-  match route router req with
+  match dispatch router req with
   | `Ok v -> f v req
   | `Invalid_query_parameter (param, _) ->
       Dream.respond ~status:`Bad_Request

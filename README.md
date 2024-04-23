@@ -20,7 +20,7 @@ Put this into your `dune` file:
 
 Define your routes:
 ```ocaml
-module Routes = struct
+module Pages = struct
   open Ppx_router_runtime.Types
 
   type t =
@@ -51,14 +51,14 @@ parameters.
 Now we can generate hrefs for these routes:
 ```ocaml
 let () =
-  assert (Routes.href Home = "/");
-  assert (Routes.href About = "/About");
-  assert (Routes.href (Hello {name="world"; repeat=1} = "/hello/world?repeat=1")
+  assert (Pages.href Home = "/");
+  assert (Pages.href About = "/About");
+  assert (Pages.href (Hello {name="world"; repeat=1} = "/hello/world?repeat=1")
 ```
 
 and define a handler for them:
 ```ocaml
-let handle = Routes.handle (fun route _req ->
+let handle = Pages.handle (fun route _req ->
   match route with
   | Home -> Dream.html "Home page!"
   | About -> Dream.html "About page!"
@@ -134,7 +134,7 @@ In this case the route type should be defined as GADT with a parameter for the
 response type:
 
 ```ocaml
-module Api_routes = struct
+module Api = struct
   open Ppx_router_runtime.Types
   open Ppx_deriving_json_runtime.Primitives
 
@@ -152,24 +152,28 @@ end
 Then handler can be defined as follows:
 ```ocaml
 let api_handler : Dream.handler =
-  let f : type a. a Api_routes.t -> Dream.request -> a Lwt.t =
+  let f : type a. a Api.t -> Dream.request -> a Lwt.t =
    fun x _req ->
     match x with
     | List_users -> Lwt.return []
-    | Create_user -> Lwt.return { Api_routes.id = 42 }
-    | Get_user { id } -> Lwt.return { Api_routes.id }
+    | Create_user -> Lwt.return { Api.id = 42 }
+    | Get_user { id } -> Lwt.return { Api.id }
     | Raw -> Dream.respond "RAW"
   in
-  Api_routes.handle { f }
+  Api.handle { f }
 ```
 
 Notice that the type annotation for `f` is required, and it should be passed
-within a record to `Api_routes.handle` function.
+within a record to `Api.handle` function.
 
 Also notice the `Raw : Dream.response t` case, which allows to return a raw
 Dream response, no encode will be generated in this case, but no type
 information will be available either. This is useful, though, when one needs to
 have API and non API routes together.
+
+## Route composition
+
+It is possible to compose routes by embedding 
 
 ## Using with Melange
 

@@ -7,8 +7,8 @@
   /hello/world
   /hello/world?modifier=uppercase
   /121
-  /Pages/hello/world
-  /Api/121
+  /hello/world
+  /api/121
   # TESTING ROUTE MATCHING GENERATION
   ## GET /
   HOME PAGE
@@ -36,11 +36,9 @@
   ## GET /raw-response
   RAW RESPONSE
   # TESTING ROUTE MATCHING GENERATION (ALL)
-  ## GET /Pages/hello/world
+  ## GET /hello/world
   Hello, world!
-  ## GET /Pages/
+  ## GET /
   HOME PAGE
-  ## GET /Pages
-  HOME PAGE
-  ## GET /Api/121
+  ## GET /api/121
   {"id":121}

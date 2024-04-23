@@ -39,7 +39,7 @@ and path_segment = Ppath of string | Pparam of string * core_type
 type route = Leaf of ctor | Mount of mount
 
 and mount = {
-  m_prefix : string;
+  m_prefix : string option;
   m_typ : longident loc;
   m_typ_param : label option;
   m_ctor : constructor_declaration;
@@ -84,6 +84,15 @@ let attr_POST = declare_router_attr `POST
 let attr_PUT = declare_router_attr `PUT
 let attr_DELETE = declare_router_attr `DELETE
 let attrs = [ attr_GET; attr_POST; attr_PUT; attr_DELETE ]
+
+let attr_path =
+  let name = "router.path" in
+  let pattern =
+    let open Ast_pattern in
+    single_expr_payload (estring __')
+  in
+  Attribute.declare name Attribute.Context.Constructor_declaration pattern
+    (fun x -> x)
 
 let to_supported_arg_type (t : core_type) =
   let loc = t.ptyp_loc in
@@ -199,7 +208,18 @@ let extract td =
         in
         match kind with
         | `mount (m_typ, m_typ_param) ->
-            let m_prefix = ctor.pcd_name.txt in
+            let m_prefix =
+              match Attribute.get attr_path ctor with
+              | None -> Some ctor.pcd_name.txt
+              | Some path -> (
+                  let path = path.txt in
+                  let path =
+                    match String.chop_prefix ~pre:"/" path with
+                    | Some path -> path
+                    | None -> path
+                  in
+                  match path with "" -> None | path -> Some path)
+            in
             let m_response = extract_mount_response ctor.pcd_res in
             Mount
               { m_prefix; m_typ; m_typ_param; m_ctor = ctor; m_response }
@@ -384,7 +404,10 @@ module Derive_href = struct
         | Mount
             { m_prefix; m_ctor; m_typ; m_typ_param = _; m_response = _ }
           ->
-            let prefix = estring ~loc ("/" ^ m_prefix) in
+            let prefix =
+              estring ~loc
+                (match m_prefix with Some p -> "/" ^ p | None -> "")
+            in
             let loc = m_ctor.pcd_loc in
             let p, x = match_ctor m_ctor in
             let e =
