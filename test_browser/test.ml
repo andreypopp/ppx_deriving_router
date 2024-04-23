@@ -7,13 +7,29 @@ module Make_fetch (Route : sig
 
   val http_method : 'a t -> [ `GET | `POST | `PUT | `DELETE ]
   val href : 'a t -> string
+  val body : 'a t -> string option
   val decode_response : 'a t -> Fetch.Response.t -> 'a Js.Promise.t
 end) : sig
-  val fetch : root:string -> 'a Route.t -> 'a Js.Promise.t
+  val fetch :
+    ?headers:Fetch.headersInit ->
+    ?referrer:string ->
+    ?referrerPolicy:Fetch.referrerPolicy ->
+    ?mode:Fetch.requestMode ->
+    ?credentials:Fetch.requestCredentials ->
+    ?cache:Fetch.requestCache ->
+    ?redirect:Fetch.requestRedirect ->
+    ?integrity:string ->
+    ?keepalive:bool ->
+    ?signal:Fetch.signal ->
+    root:string ->
+    'a Route.t ->
+    'a Js.Promise.t
 end = struct
-  let fetch ~root route =
+  let fetch ?headers ?referrer ?referrerPolicy ?mode ?credentials ?cache
+      ?redirect ?integrity ?keepalive ?signal ~root route =
     let href = root ^ Route.href route in
     let init =
+      let body = Option.map Fetch.BodyInit.make (Route.body route) in
       let method_ =
         match Route.http_method route with
         | `GET -> Fetch.Get
@@ -21,7 +37,9 @@ end = struct
         | `PUT -> Fetch.Put
         | `DELETE -> Fetch.Delete
       in
-      Fetch.RequestInit.make ~method_ ()
+      Fetch.RequestInit.make ~method_ ?headers ?referrer ?referrerPolicy
+        ?mode ?credentials ?cache ?redirect ?integrity ?keepalive ?signal
+        ?body ()
     in
     let req = Fetch.Request.makeWithInit href init in
     Fetch.fetchWithRequest req >>= fun response ->
@@ -63,6 +81,7 @@ let () =
       exit 1
   | "test" -> test ()
   | "get_user" -> fetch_and_log (Api (Get_user { id = 121 }))
+  | "create_user" -> fetch_and_log (Api (Create_user { id = 42 }))
   | "raw" -> fetch_and_log (Api Raw_response)
   | _ ->
       prerr_endline "unknown subcommand";

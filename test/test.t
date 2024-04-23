@@ -11,34 +11,38 @@
   /api/121
   # TESTING ROUTE MATCHING GENERATION
   ## GET /
-  HOME PAGE
+  OK: HOME PAGE
   ## GET /hello/world
-  Hello, world!
+  OK: Hello, world!
   ## GET /hello/world?modifier=uppercase
-  Hello, WORLD!
+  OK: Hello, WORLD!
   ## GET /Route_with_implicit_path
-  works as well, param is: -
+  OK: works as well, param is: -
   ## GET /Route_with_implicit_path?param=ok
-  works as well, param is: ok
+  OK: works as well, param is: ok
   ## POST /Route_with_implicit_path?param=ok
-  Method not allowed
+  Method Not Allowed: Method not allowed
   ## GET /Route_with_implicit_path_post
-  Method not allowed
+  Method Not Allowed: Method not allowed
   ## POST /Route_with_implicit_path_post
-  posted
+  OK: posted
   # TESTING ROUTE MATCHING GENERATION (API)
   ## GET /
-  []
+  OK: []
   ## POST /
-  {"id":42}
+  Bad Request: Invalid or missing request body: Blank input data
+  ## POST /
+  Bad Request: Invalid or missing request body: Expected int, got object
+  ## POST /
+  OK: {"id":1}
   ## GET /121
-  {"id":121}
+  OK: {"id":121}
   ## GET /raw-response
-  RAW RESPONSE
+  OK: RAW RESPONSE
   # TESTING ROUTE MATCHING GENERATION (ALL)
   ## GET /hello/world
-  Hello, world!
+  OK: Hello, world!
   ## GET /
-  HOME PAGE
+  OK: HOME PAGE
   ## GET /api/121
-  {"id":121}
+  OK: {"id":121}

@@ -171,6 +171,18 @@ Dream response, no encode will be generated in this case, but no type
 information will be available either. This is useful, though, when one needs to
 have API and non API routes together.
 
+## Decoding request body
+
+It is possible to designate a route parameter to be a request body, in this
+case, its value is decoded from the request body as JSON. The JSON decoder is
+generated automatically for the route parameter type:
+```ocaml
+type user_spec = { name : string } [@@deriving json]
+type _ api =
+| Create_user : {spec: user_spec; [@body]} -> int t [@POST]
+[@@deriving router]
+```
+
 ## Route composition
 
 It is possible to compose routes by embedding other routes as arguments to

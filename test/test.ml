@@ -25,7 +25,7 @@ let api_handle : type a. a Api.t -> Dream.request -> a Lwt.t =
   match x with
   | Raw_response -> Dream.respond "RAW RESPONSE"
   | List_users -> Lwt.return []
-  | Create_user -> Lwt.return { Api.id = 42 }
+  | Create_user { id } -> Lwt.return { Api.id }
   | Get_user { id } -> Lwt.return { Api.id }
 
 let api_handler : Dream.handler = Api.handle { f = api_handle }
@@ -55,14 +55,18 @@ let test () =
     (All.href (Pages (Hello { name = "world"; modifier = None })));
   print_endline (All.href (Api (Get_user { id = 121 })));
   print_endline "# TESTING ROUTE MATCHING GENERATION";
-  let test_req h method_ target =
+  let test_req ?body h method_ target =
     print_endline
       (Printf.sprintf "## %s %s" (Dream.method_to_string method_) target);
     Lwt_main.run
       (let req = Dream.request ~method_ ~target "" in
+       Option.iter (Dream.set_body req) body;
        h req >>= fun resp ->
        Dream.body resp >>= fun body ->
-       print_endline body;
+       print_endline
+         (Printf.sprintf "%s: %s"
+            (Dream.status resp |> Dream.status_to_string)
+            body);
        Lwt.return ())
   in
   test_req pages_handler `GET "/";
@@ -76,6 +80,8 @@ let test () =
   print_endline "# TESTING ROUTE MATCHING GENERATION (API)";
   test_req api_handler `GET "/";
   test_req api_handler `POST "/";
+  test_req api_handler ~body:"{}" `POST "/";
+  test_req api_handler ~body:"1" `POST "/";
   test_req api_handler `GET "/121";
   test_req api_handler `GET "/raw-response";
   print_endline "# TESTING ROUTE MATCHING GENERATION (ALL)";

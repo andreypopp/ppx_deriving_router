@@ -50,6 +50,7 @@ let encode_query_value out x =
 
 exception Method_not_allowed
 exception Invalid_query_parameter of string * string list
+exception Invalid_body of string
 
 type 'v route =
   | Route : ('a, 'v) Routes.path * 'a * ('v -> 'w) -> 'w route
@@ -75,27 +76,35 @@ let encode : type a. a encode -> a -> Dream.response Lwt.t =
   | Encode_json to_json, x ->
       Dream.json (Yojson.Basic.to_string (to_json x))
 
-type 'a router = (Dream.request -> 'a) Routes.router
+type 'a router = (Dream.request -> 'a Lwt.t) Routes.router
 
 let make x = x
 
 let dispatch (router : _ router) req =
   let target = Dream.target req in
   match Routes.match' router ~target with
-  | Routes.FullMatch v | Routes.MatchWithTrailingSlash v -> (
-      match v req with
-      | v -> `Ok v
-      | exception Invalid_query_parameter (x, y) ->
-          `Invalid_query_parameter (x, y)
-      | exception Method_not_allowed -> `Method_not_allowed)
-  | Routes.NoMatch -> `Not_found
+  | Routes.FullMatch v | Routes.MatchWithTrailingSlash v ->
+      Lwt.bind
+        (Lwt_result.catch (fun () -> v req))
+        (function
+          | Ok v -> Lwt.return (`Ok v)
+          | Error (Invalid_query_parameter (x, y)) ->
+              Lwt.return (`Invalid_query_parameter (x, y))
+          | Error (Invalid_body reason) ->
+              Lwt.return (`Invalid_body reason)
+          | Error Method_not_allowed -> Lwt.return `Method_not_allowed
+          | Error exn -> Lwt.fail exn)
+  | Routes.NoMatch -> Lwt.return `Not_found
 
 let handle (router : _ router) f req =
-  match dispatch router req with
-  | `Ok v -> f v req
-  | `Invalid_query_parameter (param, _) ->
-      Dream.respond ~status:`Bad_Request
-        (Printf.sprintf "Invalid or missing query parameter: %s" param)
-  | `Method_not_allowed ->
-      Dream.respond ~status:`Method_Not_Allowed "Method not allowed"
-  | `Not_found -> Dream.respond ~status:`Not_Found "Not found"
+  Lwt.bind (dispatch router req) (function
+    | `Ok v -> f v req
+    | `Invalid_query_parameter (param, _) ->
+        Dream.respond ~status:`Bad_Request
+          (Printf.sprintf "Invalid or missing query parameter: %s" param)
+    | `Invalid_body reason ->
+        Dream.respond ~status:`Bad_Request
+          (Printf.sprintf "Invalid or missing request body: %s" reason)
+    | `Method_not_allowed ->
+        Dream.respond ~status:`Method_Not_Allowed "Method not allowed"
+    | `Not_found -> Dream.respond ~status:`Not_Found "Not found")

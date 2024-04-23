@@ -30,6 +30,7 @@ type leaf = {
   l_method_ : method_;
   l_path : path;
   l_query : (string * core_type) list;
+  l_body : (string * core_type) option;
   l_response : [ `response | `json_response of core_type ];
 }
 
@@ -94,6 +95,10 @@ let attr_prefix =
   in
   Attribute.declare name Attribute.Context.Constructor_declaration pattern
     (fun x -> x)
+
+let attr_body =
+  let name = "router.body" in
+  Attribute.declare_flag name Attribute.Context.Label_declaration
 
 let to_supported_arg_type (t : core_type) =
   let loc = t.ptyp_loc in
@@ -245,6 +250,23 @@ let extract td =
               | Some (method_, None) ->
                   method_, Uri.of_string ("/" ^ ctor.pcd_name.txt)
             in
+            let lds, l_body =
+              List.partition_filter_map lds ~f:(fun ld ->
+                  match Attribute.has_flag attr_body ld with
+                  | false -> `Left ld
+                  | true -> `Right ld)
+            in
+            let l_body =
+              match l_body, l_method_ with
+              | [], _ -> None
+              | x :: _, `GET ->
+                  Location.raise_errorf ~loc:x.pld_loc
+                    "@body is not allowed for GET requests"
+              | [ x ], _ -> Some (x.pld_name.txt, x.pld_type)
+              | x :: _, _ ->
+                  Location.raise_errorf ~loc:x.pld_loc
+                    "multiple @body annotations are not allowed"
+            in
             let resolve_type name =
               let typ =
                 List.find_map lds ~f:(fun ld ->
@@ -277,7 +299,14 @@ let extract td =
             in
             let l_response = extract_leaf_response ctor.pcd_res in
             let leaf =
-              { l_ctor = ctor; l_method_; l_path; l_query; l_response }
+              {
+                l_ctor = ctor;
+                l_method_;
+                l_path;
+                l_query;
+                l_body;
+                l_response;
+              }
             in
             (match
                List.find_map ctors ~f:(function
@@ -306,6 +335,25 @@ let register ~derive () =
   let args = Deriving.Args.(empty) in
   let str_type_decl = Deriving.Generator.V2.make args derive_router in
   ignore (Deriving.add ~str_type_decl "router" : Deriving.t)
+
+let td_newtype td ret_ty =
+  let loc = td.ptype_loc in
+  let name = td.ptype_name.txt in
+  let vs =
+    List.map td.ptype_params ~f:(fun _ -> gen_symbol ~prefix:"t" ())
+  in
+  let t =
+    ptyp_constr ~loc
+      { txt = Lident name; loc }
+      (List.map vs ~f:(fun txt ->
+           ptyp_constr ~loc { txt = Lident txt; loc } []))
+  in
+  let t = [%type: [%t t] -> [%t ret_ty]] in
+  let we e =
+    List.fold_left vs ~init:e ~f:(fun acc txt ->
+        pexp_newtype ~loc { txt; loc } acc)
+  in
+  t, we
 
 module Derive_href = struct
   let case ~loc (path : path) query x =
@@ -384,25 +432,6 @@ module Derive_href = struct
         | [] -> body
         | bnds -> pexp_let ~loc Nonrecursive bnds body)
 
-  let td_newtype td ret_ty =
-    let loc = td.ptype_loc in
-    let name = td.ptype_name.txt in
-    let vs =
-      List.map td.ptype_params ~f:(fun _ -> gen_symbol ~prefix:"t" ())
-    in
-    let t =
-      ptyp_constr ~loc
-        { txt = Lident name; loc }
-        (List.map vs ~f:(fun txt ->
-             ptyp_constr ~loc { txt = Lident txt; loc } []))
-    in
-    let t = [%type: [%t t] -> [%t ret_ty]] in
-    let we e =
-      List.fold_left vs ~init:e ~f:(fun acc txt ->
-          pexp_newtype ~loc { txt; loc } acc)
-    in
-    t, we
-
   let derive td (routes : route list) =
     let loc = td.ptype_loc in
     let name = td.ptype_name.txt in
@@ -431,18 +460,13 @@ module Derive_href = struct
             p --> e
         | Leaf leaf -> (
             let loc = leaf.l_ctor.pcd_loc in
-            let has_params =
-              List.exists leaf.l_path ~f:(function
-                | Pparam _ -> true
-                | _ -> false)
-            in
-            match has_params, leaf.l_query with
-            | false, [] ->
+            match leaf.l_ctor.pcd_args with
+            | Pcstr_tuple [] ->
                 let p = pat_ctor leaf.l_ctor None in
                 p --> case ~loc leaf.l_path [] [%expr assert false]
-            | _, query ->
+            | _ ->
                 let p, x = match_ctor leaf.l_ctor in
-                p --> case ~loc leaf.l_path query x))
+                p --> case ~loc leaf.l_path leaf.l_query x))
     in
     [%stri
       let [%p pvar ~loc name] =
@@ -454,7 +478,7 @@ module Derive_method = struct
     let loc = td.ptype_loc in
     let name = td.ptype_name.txt in
     let t, we =
-      Derive_href.td_newtype td [%type: [ `GET | `POST | `PUT | `DELETE ]]
+      td_newtype td [%type: [ `GET | `POST | `PUT | `DELETE ]]
     in
     let name = mangle (Suffix "http_method") name in
     let cases =

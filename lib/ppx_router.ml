@@ -76,8 +76,8 @@ let derive_mount td m =
       Stdlib.List.map
         (fun route ->
           let f f req =
-            let [%p p [%pat? x, _encode]] = f req in
-            [%e make_with_encode encode]
+            Lwt.bind (f req) (fun [%p p [%pat? x, _encode]] ->
+                Lwt.return [%e make_with_encode encode])
           in
           Ppx_router_runtime.prefix_route
             [%e
@@ -89,11 +89,11 @@ let derive_mount td m =
   in
   value_binding ~loc ~pat ~expr
 
-let derive_path td (ctor, ctors) =
-  let loc = ctor.l_ctor.pcd_loc in
-  let name = derive_path_name ctor.l_ctor in
+let derive_path td (exemplar, ctors) =
+  let loc = exemplar.l_ctor.pcd_loc in
+  let name = derive_path_name exemplar.l_ctor in
   let body =
-    match ctor.l_path with
+    match exemplar.l_path with
     | [] -> [%expr Routes.nil]
     | init :: params ->
         let body =
@@ -114,7 +114,7 @@ let derive_path td (ctor, ctors) =
   in
   let make =
     let params =
-      List.filter ctor.l_path ~f:(function
+      List.filter exemplar.l_path ~f:(function
         | Pparam _ -> true
         | Ppath _ -> false)
       |> List.mapi ~f:(fun idx _ -> Printf.sprintf "_param%d" idx)
@@ -127,14 +127,14 @@ let derive_path td (ctor, ctors) =
           --> [%expr raise Ppx_router_runtime.Method_not_allowed];
         ]
       in
-      List.fold_left ctors ~init ~f:(fun cases ctor ->
-          let loc = ctor.l_ctor.pcd_loc in
-          let name = ctor.l_ctor.pcd_name.txt in
-          let method_ = method_to_string ctor.l_method_ in
+      List.fold_left ctors ~init ~f:(fun cases leaf ->
+          let loc = leaf.l_ctor.pcd_loc in
+          let name = leaf.l_ctor.pcd_name.txt in
+          let method_ = method_to_string leaf.l_method_ in
           let pat = ppat_variant ~loc method_ None in
           let lname = { loc; txt = Lident name } in
           let path_params =
-            List.filter_map ctor.l_path ~f:(function
+            List.filter_map leaf.l_path ~f:(function
               | Pparam (name, _) -> Some name
               | Ppath _ -> None)
           in
@@ -144,7 +144,7 @@ let derive_path td (ctor, ctors) =
           in
           let args =
             args
-            @ List.filter_map ctor.l_query ~f:(fun (name, typ) ->
+            @ List.filter_map leaf.l_query ~f:(fun (name, typ) ->
                   let field_name = { loc; txt = Lident name } in
                   let of_url = derive_conv "of_url_query" typ in
                   let value =
@@ -161,23 +161,48 @@ let derive_path td (ctor, ctors) =
                   in
                   Some (field_name, value))
           in
-          let args =
-            match args with
-            | [] -> None
-            | args -> Some (pexp_record ~loc args None)
-          in
-          let expr = pexp_construct ~loc lname args in
           let to_response =
-            match ctor.l_response with
+            match leaf.l_response with
             | `response -> [%expr Ppx_router_runtime.Encode_raw]
             | `json_response t ->
                 [%expr Ppx_router_runtime.Encode_json [%to_json: [%t t]]]
           in
-          let expr =
+          let make args =
+            let args =
+              match args with
+              | [] -> None
+              | args -> Some (pexp_record ~loc args None)
+            in
+            let expr = pexp_construct ~loc lname args in
             pexp_construct ~loc
               { loc; txt = Lident (packed_ctor_name td) }
               (Some [%expr [%e expr], [%e to_response]])
           in
+          (* handle body *)
+          let pbody, ebody = patt_and_expr ~loc "_body" in
+          let expr =
+            match leaf.l_body with
+            | None -> [%expr Lwt.return [%e make args]]
+            | Some (name, body) ->
+                let name = { loc; txt = Lident name } in
+                let args = (name, ebody) :: args in
+                [%expr
+                  Lwt.bind
+                    (Dream.body [%e req])
+                    (fun [%p pbody] ->
+                      let [%p pbody] =
+                        try Yojson.Basic.from_string [%e ebody]
+                        with Yojson.Json_error msg ->
+                          raise (Ppx_router_runtime.Invalid_body msg)
+                      in
+                      let [%p pbody] =
+                        try [%of_json: [%t body]] [%e ebody]
+                        with Yojson.Basic.Util.Type_error (msg, _) ->
+                          raise (Ppx_router_runtime.Invalid_body msg)
+                      in
+                      Lwt.return [%e make args])]
+          in
+
           (pat --> expr) :: cases)
     in
     let make =

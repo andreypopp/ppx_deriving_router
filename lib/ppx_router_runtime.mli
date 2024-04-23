@@ -32,6 +32,7 @@ val encode_query_value : Buffer.t -> string -> unit
 
 exception Method_not_allowed
 exception Invalid_query_parameter of string * string list
+exception Invalid_body of string
 
 (** RESPONSE ENCODING *)
 
@@ -56,7 +57,7 @@ val to_route : 'a route -> 'a Routes.route
 
 type 'a router
 
-val make : (Dream.request -> 'a) Routes.router -> 'a router
+val make : (Dream.request -> 'a Lwt.t) Routes.router -> 'a router
 
 val handle : 'a router -> ('a -> Dream.handler) -> Dream.handler
 (** handle request given a router and a dispatcher *)
@@ -64,7 +65,9 @@ val handle : 'a router -> ('a -> Dream.handler) -> Dream.handler
 val dispatch :
   'a router ->
   Dream.request ->
-  [> `Invalid_query_parameter of string * string list
+  [ `Invalid_query_parameter of string * string list
+  | `Invalid_body of string
   | `Method_not_allowed
   | `Not_found
   | `Ok of 'a ]
+  Lwt.t
