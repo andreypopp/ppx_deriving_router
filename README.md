@@ -58,7 +58,7 @@ let () =
 
 and define a handler for them:
 ```ocaml
-let handle = Pages.handle (fun route _req ->
+let pages_handle = Pages.handle (fun route _req ->
   match route with
   | Home -> Dream.html "Home page!"
   | About -> Dream.html "About page!"
@@ -74,7 +74,7 @@ let handle = Pages.handle (fun route _req ->
 
 Finally we can use the handler in a Dream app:
 ```ocaml
-let () = Dream.run ~interface:"0.0.0.0" ~port:8080 handle
+let () = Dream.run ~interface:"0.0.0.0" ~port:8080 pages_handle
 ```
 
 ## Custom path/query parameter types
@@ -151,7 +151,7 @@ end
 
 Then handler can be defined as follows:
 ```ocaml
-let api_handler : Dream.handler =
+let api_handle : Dream.handler =
   let f : type a. a Api.t -> Dream.request -> a Lwt.t =
    fun x _req ->
     match x with
@@ -173,7 +173,44 @@ have API and non API routes together.
 
 ## Route composition
 
-It is possible to compose routes by embedding 
+It is possible to compose routes by embedding other routes as arguments to
+constructor, consider the example:
+```ocaml
+module Routes = struct
+
+  type _ t =
+    | Pages : Pages.t -> Dream.response t [@path "/"]
+    | Api : 'a Api.t -> 'a t
+  [@@deriving router]
+end
+```
+
+In this case the URLs structure will be as follows:
+```ocaml
+let () =
+  assert (Routes.href (Pages Home) = "/");
+  assert (Routes.href (Pages About) = "/About");
+  assert (Routes.href (Api (Get_user {id=1})) = "/Api/1");
+```
+
+Notice how `[@path]` attribute is used to specify the path for the routes
+prefix (in its absence the path will be equal to the coresponding constructor
+name).
+
+The handler can be defined as follows:
+```ocaml
+let routes_handler : Dream.handler =
+  let f : type a. a All.t -> Dream.request -> a Lwt.t =
+   fun x req ->
+    match x with
+    | Pages p -> pages_handle p req
+    | Api e -> api_handle e req
+  in
+  All.handle { f }
+```
+
+Note how we delegated request processing to corresponding handlers. We can also
+run certain middlewares for certain routes, if we wish to do so.
 
 ## Using with Melange
 
