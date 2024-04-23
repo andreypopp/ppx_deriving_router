@@ -1,26 +1,26 @@
 (library
- (name ppx_router_browser)
- (modules :standard \ ppx_router_runtime ppx_router_test)
+ (name ppx_deriving_router_browser)
+ (modules :standard \ ppx_deriving_router_runtime ppx_deriving_router_test)
  (wrapped false)
- (public_name ppx_router.browser)
+ (public_name ppx_deriving_router.browser)
  (libraries uri ppxlib containers)
  (kind ppx_deriver)
- (ppx_runtime_libraries ppx_router.browser_runtime)
+ (ppx_runtime_libraries ppx_deriving_router.browser_runtime)
  (preprocess
   (pps ppxlib.metaquot)))
 
 (library
- (name ppx_router_browser_runtime)
+ (name ppx_deriving_router_browser_runtime)
  (wrapped false)
  (modes melange)
- (modules ppx_router_runtime)
- (public_name ppx_router.browser_runtime)
+ (modules ppx_deriving_router_runtime)
+ (public_name ppx_deriving_router.browser_runtime)
  (libraries melange-fetch))
 
 (executable
- (name ppx_router_test)
- (modules ppx_router_test)
- (libraries ppx_router_browser))
+ (name ppx_deriving_router_test)
+ (modules ppx_deriving_router_test)
+ (libraries ppx_deriving_router_browser))
 
 (copy_files#
- (files ../lib/ppx_router_common.ml))
+ (files ../lib/ppx_deriving_router_common.ml))

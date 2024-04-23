@@ -1,6 +1,7 @@
-# `ppx_router`
+# `ppx_deriving_router`
 
-A typed router for Dream.
+Derive type safe routing from OCaml variant type declarations. Supports Dream
+and Melange. Enables type safe client-server communication.
 
 ## Usage
 
@@ -8,20 +9,20 @@ Install (custom opam repo is required as for now):
 ```
 opam repo add andreypopp https://github.com/andreypopp/opam-repository.git
 opam update
-opam install ppx_router
+opam install ppx_deriving_router
 ```
 
 Put this into your `dune` file:
 ```
 (...
- (preprocess (pps ppx_router))
+ (preprocess (pps ppx_deriving_router))
  ...)
 ```
 
 Define your routes:
 ```ocaml
 module Pages = struct
-  open Ppx_router_runtime.Types
+  open Ppx_deriving_router_runtime.Types
 
   type t =
     | Home [@GET "/"]
@@ -80,7 +81,7 @@ let () = Dream.run ~interface:"0.0.0.0" ~port:8080 pages_handle
 ## Custom path/query parameter types
 
 When generating parameter encoding/decoding code for a parameter of type `T`,
-`ppx_router` will emit the code that uses the following functions.
+`ppx_deriving_router` will emit the code that uses the following functions.
 
 If `T` is a path parameter:
 ```ocaml
@@ -94,7 +95,7 @@ val T_of_url_query : string list -> T option
 val T_to_url_query : T -> string list
 ```
 
-The default encoders/decoders are provided in `Ppx_router_runtime.Types` module
+The default encoders/decoders are provided in `Ppx_deriving_router_runtime.Types` module
 (this is why we need to `open` the module when defining routes).
 
 To provide custom encoders/decoders for a custom type, we can define own
@@ -104,13 +105,13 @@ functions, for example:
 module Modifier = struct
   type t = Capitalize | Uppercase
 
-  let rec of_url_query : t Ppx_router_runtime.url_query_decoder = function
+  let rec of_url_query : t Ppx_deriving_router_runtime.url_query_decoder = function
     | [] -> None
     | [ "capitalize" ] -> Some Capitalize
     | [ "uppercase" ] -> Some Uppercase
     | _ :: xs -> of_url_query xs (* let the last one win *)
 
-  let to_url_query : t Ppx_router_runtime.url_query_encoder = function
+  let to_url_query : t Ppx_deriving_router_runtime.url_query_encoder = function
     | Capitalize -> [ "capitalize" ]
     | Uppercase -> [ "uppercase" ]
 end
@@ -135,7 +136,7 @@ response type:
 
 ```ocaml
 module Api = struct
-  open Ppx_router_runtime.Types
+  open Ppx_deriving_router_runtime.Types
   open Ppx_deriving_json_runtime.Primitives
 
   type user = { id : int } [@@deriving json]
@@ -226,12 +227,12 @@ run certain middlewares for certain routes, if we wish to do so.
 
 ## Using with Melange
 
-`ppx_router` can be used with Melange, 
+`ppx_deriving_router` can be used with Melange, 
 
-For that, one should use `ppx_router.browser` ppx in `dune` file:
+For that, one should use `ppx_deriving_router.browser` ppx in `dune` file:
 ```
 (...
- (preprocess (pps ppx_router.browser))
+ (preprocess (pps ppx_deriving_router.browser))
  ...)
 ```
 
@@ -274,7 +275,7 @@ end
 
 Note that if routes mention `Dream.response` in its response parameter then it
 won't compile with Melange (because Dream is not available for Melange). For
-that one should use `Ppx_router_runtime.response` type instead which is an
+that one should use `Ppx_deriving_router_runtime.response` type instead which is an
 alias for `Dream.response` in native and for `Fetch.Response.t` in Melange.
 
 The common setup is to define routes in a separate dune library which is

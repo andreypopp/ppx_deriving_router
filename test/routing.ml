@@ -15,7 +15,7 @@ let modifier_to_url_query = function
   | Lowercase -> [ "lowercase" ]
 
 module Pages = struct
-  open Ppx_router_runtime.Types
+  open Ppx_deriving_router_runtime.Types
 
   type t =
     | Home [@GET "/"]
@@ -27,7 +27,7 @@ module Pages = struct
 end
 
 module Api = struct
-  open Ppx_router_runtime.Types
+  open Ppx_deriving_router_runtime.Types
   open Ppx_deriving_json_runtime.Primitives
 
   type user = { id : int } [@@deriving json]
@@ -36,13 +36,15 @@ module Api = struct
     | List_users : user list t [@GET "/"]
     | Create_user : { id : int [@body] } -> user t [@POST "/"]
     | Get_user : { id : int } -> user t [@GET "/:id"]
-    | Raw_response : Ppx_router_runtime.response t [@GET "/raw-response"]
+    | Raw_response : Ppx_deriving_router_runtime.response t
+        [@GET "/raw-response"]
   [@@deriving router]
 end
 
 module All = struct
   type _ t =
-    | Pages : Pages.t -> Ppx_router_runtime.response t [@prefix "/"]
+    | Pages : Pages.t -> Ppx_deriving_router_runtime.response t
+        [@prefix "/"]
     | Api : 'a Api.t -> 'a t [@prefix "/api"]
   [@@deriving router]
 end

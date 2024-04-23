@@ -1,7 +1,7 @@
 open ContainersLabels
 open Ppxlib
 open Ast_builder.Default
-open Ppx_router_common
+open Ppx_deriving_router_common
 open Expansion_helpers
 
 let derive_path_name ctor =
@@ -42,7 +42,7 @@ let td_to_ty_enc param td =
     | None -> [%type: Dream.response]
     | Some param -> param
   in
-  [%type: [%t result] Ppx_router_runtime.encode]
+  [%type: [%t result] Ppx_deriving_router_runtime.encode]
 
 let derive_mount td m =
   let loc = m.m_ctor.pcd_loc in
@@ -70,7 +70,7 @@ let derive_mount td m =
     let encode =
       match m.m_response with
       | `passthrough -> [%expr _encode]
-      | `response -> [%expr Ppx_router_runtime.Encode_raw]
+      | `response -> [%expr Ppx_deriving_router_runtime.Encode_raw]
     in
     [%expr
       Stdlib.List.map
@@ -79,7 +79,7 @@ let derive_mount td m =
             Lwt.bind (f req) (fun [%p p [%pat? x, _encode]] ->
                 Lwt.return [%e make_with_encode encode])
           in
-          Ppx_router_runtime.prefix_route
+          Ppx_deriving_router_runtime.prefix_route
             [%e
               match m.m_prefix with
               | Some p -> [%expr Some [%e estring ~loc p]]
@@ -124,7 +124,7 @@ let derive_path td (exemplar, ctors) =
       let init =
         [
           ppat_any ~loc
-          --> [%expr raise Ppx_router_runtime.Method_not_allowed];
+          --> [%expr raise Ppx_deriving_router_runtime.Method_not_allowed];
         ]
       in
       List.fold_left ctors ~init ~f:(fun cases leaf ->
@@ -156,16 +156,19 @@ let derive_path td (exemplar, ctors) =
                       | Some v -> v
                       | None ->
                           raise
-                            (Ppx_router_runtime.Invalid_query_parameter
+                            (Ppx_deriving_router_runtime
+                             .Invalid_query_parameter
                                ([%e estring ~loc name], v))]
                   in
                   Some (field_name, value))
           in
           let to_response =
             match leaf.l_response with
-            | `response -> [%expr Ppx_router_runtime.Encode_raw]
+            | `response -> [%expr Ppx_deriving_router_runtime.Encode_raw]
             | `json_response t ->
-                [%expr Ppx_router_runtime.Encode_json [%to_json: [%t t]]]
+                [%expr
+                  Ppx_deriving_router_runtime.Encode_json
+                    [%to_json: [%t t]]]
           in
           let make args =
             let args =
@@ -193,12 +196,14 @@ let derive_path td (exemplar, ctors) =
                       let [%p pbody] =
                         try Yojson.Basic.from_string [%e ebody]
                         with Yojson.Json_error msg ->
-                          raise (Ppx_router_runtime.Invalid_body msg)
+                          raise
+                            (Ppx_deriving_router_runtime.Invalid_body msg)
                       in
                       let [%p pbody] =
                         try [%of_json: [%t body]] [%e ebody]
                         with Yojson.Basic.Util.Type_error (msg, _) ->
-                          raise (Ppx_router_runtime.Invalid_body msg)
+                          raise
+                            (Ppx_deriving_router_runtime.Invalid_body msg)
                       in
                       Lwt.return [%e make args])]
           in
@@ -216,7 +221,10 @@ let derive_path td (exemplar, ctors) =
   let pat = pvar ~loc name in
   let expr =
     [%expr
-      [ Ppx_router_runtime.Route ([%e body], [%e make], Stdlib.Fun.id) ]]
+      [
+        Ppx_deriving_router_runtime.Route
+          ([%e body], [%e make], Stdlib.Fun.id);
+      ]]
   in
   value_binding ~loc ~pat ~expr
 
@@ -313,9 +321,9 @@ let derive_router_td td =
 
     let [%p pvar ~loc (handle_name td)] =
       let router =
-        Ppx_router_runtime.make
+        Ppx_deriving_router_runtime.make
           (let routes =
-             Stdlib.List.map Ppx_router_runtime.to_route
+             Stdlib.List.map Ppx_deriving_router_runtime.to_route
                [%e evar ~loc (routes_name td)]
            in
            Routes.one_of routes)
@@ -323,14 +331,15 @@ let derive_router_td td =
       fun ({ f } :
             [%t
               ptyp_constr ~loc { loc; txt = Lident (handler_name td) } []]) ->
-        Ppx_router_runtime.handle router
+        Ppx_deriving_router_runtime.handle router
           (fun
             [%p
               ppat_construct ~loc
                 { loc; txt = Lident (packed_ctor_name td) }
                 (Some [%pat? p, encode])]
             req
-          -> Lwt.bind (f p req) (Ppx_router_runtime.encode encode))
+          ->
+            Lwt.bind (f p req) (Ppx_deriving_router_runtime.encode encode))
 
     let [%p pvar ~loc (handle_name td)] =
       [%e

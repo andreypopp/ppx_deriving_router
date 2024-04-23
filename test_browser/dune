@@ -3,7 +3,7 @@
  (modes melange)
  (libraries melange-fetch)
  (preprocess
-  (pps melange.ppx ppx_router.browser ppx_deriving_json.browser)))
+  (pps melange.ppx ppx_deriving_router.browser ppx_deriving_json.browser)))
 
 (melange.emit
  (alias js)

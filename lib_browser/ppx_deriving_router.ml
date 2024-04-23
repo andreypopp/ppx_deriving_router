@@ -1,7 +1,7 @@
 open! ContainersLabels
 open! Ppxlib
 open! Ast_builder.Default
-open Ppx_router_common
+open Ppx_deriving_router_common
 open Expansion_helpers
 
 let derive_decode_response td param ctors =

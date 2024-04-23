@@ -47,7 +47,7 @@ end = struct
 end
 
 module Test_composition = struct
-  open Ppx_router_runtime.Types
+  open Ppx_deriving_router_runtime.Types
   open Ppx_deriving_json_runtime.Primitives
 
   type _ x = Home : int x | About : string x [@@deriving router]

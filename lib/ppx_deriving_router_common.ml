@@ -156,7 +156,8 @@ let extract_mount_response = function
   | Some t -> (
       let loc = t.ptyp_loc in
       match t.ptyp_desc with
-      | Ptyp_constr (_, [ [%type: Ppx_router_runtime.response] ]) ->
+      | Ptyp_constr (_, [ [%type: Ppx_deriving_router_runtime.response] ])
+        ->
           `response
       | Ptyp_constr (_, [ [%type: 'a] ]) -> `passthrough
       | _ ->
@@ -168,7 +169,8 @@ let extract_leaf_response = function
   | Some t -> (
       let loc = t.ptyp_loc in
       match t.ptyp_desc with
-      | Ptyp_constr (_, [ [%type: Ppx_router_runtime.response] ]) ->
+      | Ptyp_constr (_, [ [%type: Ppx_deriving_router_runtime.response] ])
+        ->
           `response
       | Ptyp_constr (_, [ [%type: [%t? a]] ]) -> `json_response a
       | _ ->
@@ -378,12 +380,12 @@ module Derive_href = struct
                     Stdlib.List.iter
                       (fun value ->
                         Buffer.add_char [%e out] ![%e sep];
-                        Ppx_router_runtime.encode_query_key [%e out]
-                          [%e estring ~loc name];
+                        Ppx_deriving_router_runtime.encode_query_key
+                          [%e out] [%e estring ~loc name];
                         [%e sep] := '&';
                         Buffer.add_char [%e out] '=';
-                        Ppx_router_runtime.encode_query_value [%e out]
-                          value)
+                        Ppx_deriving_router_runtime.encode_query_value
+                          [%e out] value)
                       ([%e derive_conv "to_url_query" typ] [%e value])]
                 in
                 [%expr
@@ -399,14 +401,14 @@ module Derive_href = struct
               | Ppath x ->
                   [%expr
                     Buffer.add_char [%e out] '/';
-                    Ppx_router_runtime.encode_path [%e out]
+                    Ppx_deriving_router_runtime.encode_path [%e out]
                       [%e estring ~loc x];
                     [%e acc]]
               | Pparam (x, typ) ->
                   let to_url = derive_conv "to_url_path" typ in
                   [%expr
                     Buffer.add_char [%e out] '/';
-                    Ppx_router_runtime.encode_path [%e out]
+                    Ppx_deriving_router_runtime.encode_path [%e out]
                       ([%e to_url] [%e evar ~loc x]);
                     [%e acc]])
         in

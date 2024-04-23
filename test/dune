@@ -2,7 +2,7 @@
  (name test)
  (libraries dream)
  (preprocess
-  (pps ppx_router ppx_deriving_json.native)))
+  (pps ppx_deriving_router ppx_deriving_json.native)))
 
 (cram
  (deps ./test.exe))

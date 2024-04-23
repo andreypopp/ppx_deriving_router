@@ -5,7 +5,7 @@
 (generate_opam_files true)
 
 (source
- (github andreypopp/ppx_router))
+ (github andreypopp/ppx_deriving_router))
 
 (authors "Andrey Popp")
 
@@ -14,7 +14,7 @@
 (license LICENSE)
 
 (package
- (name ppx_router)
+ (name ppx_deriving_router)
  (depends
   (ocaml
    (>= 4.14))
