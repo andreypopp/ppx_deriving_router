@@ -1,7 +1,8 @@
 # `ppx_deriving_router`
 
-Derive type safe routing from OCaml variant type declarations. Supports Dream
-and Melange. Enables type safe client-server communication.
+Derive type safe routing from OCaml variant type declarations.
+
+Supports Dream and Melange. Enables type safe client-server communication.
 
 ## Usage
 
@@ -12,14 +13,14 @@ opam update
 opam install ppx_deriving_router
 ```
 
-Put this into your `dune` file:
+Add preprocessing configuration in `dune`:
 ```
 (...
  (preprocess (pps ppx_deriving_router))
  ...)
 ```
 
-Define your routes:
+Define routes:
 ```ocaml
 module Pages = struct
   open Ppx_deriving_router_runtime.Types
@@ -32,24 +33,30 @@ module Pages = struct
 end
 ```
 
-Notice the `[@@deriving router]` annotation, which instructs to generate code
-for routing based on the variant type definition.
+Note the `[@@deriving router]` annotation, which instructs to generate routing
+code based on the variant type declaration it is attached to. Each constructor
+corresponds to a separate route.
 
-Each branch in the variant type definition corresponds to a separate route.
+By default the route corresponds to a GET request, and path is inferred from
+the constructor name.
 
-It can have a `[@GET "/path"]` attribute (or `[@POST "/path"]`, etc.) which
-specifies a path pattern for the route. If such attribute is missing, the path
-is then inferred from the variant name, for example `About` will be routed to
-`/About`, the method is GET by default (but one can supply `[@POST]`, etc.
-attribute without any payload just to specify the method, leaving path
-implicit).
+By attaching `[@GET]`, `[@POST]`, `[@PUT]`, `[@DELETE]` attributes to the
+constructor, one can specify the HTTP method for the route.
 
-The path pattern can contain named parameters, like `:name` in the example
-above. In this case the parameter will be extracted from the path and used in
-the route payload. All other fields from a route payload are considered query
-parameters.
+The attributes also allow to specify the path pattern for the route, e.g.
+`[@GET "/hello/:name"]`. As seen, path patterns can contain named parameters,
+like `:name` in the example above. In this case the parameter will be extracted
+from the path and used in the route payload. All other fields from a route
+payload are considered URL query parameters.
 
-Now we can generate hrefs for these routes:
+## Generating URLs
+
+A function with signature:
+```ocaml
+val href : t -> string
+```
+
+is generated for each route type. Such function can be used to generate URLs based on routes:
 ```ocaml
 let () =
   assert (Pages.href Home = "/");
@@ -57,7 +64,14 @@ let () =
   assert (Pages.href (Hello {name="world"; repeat=1} = "/hello/world?repeat=1")
 ```
 
-and define a handler for them:
+## Handling routes
+
+A function with signature:
+```ocaml
+val handle : (t -> Dream.request -> Dream.response Lwt.t) -> Dream.handler
+```
+
+is generated for each route type. Such function can be used to define a `Dream.handler`:
 ```ocaml
 let pages_handle = Pages.handle (fun route _req ->
   match route with
@@ -73,7 +87,9 @@ let pages_handle = Pages.handle (fun route _req ->
     Dream.html (Printf.sprintf "Hello, %s" name))
 ```
 
-Finally we can use the handler in a Dream app:
+## Using the handler in a Dream app
+
+As a result of the `Pages.handle` call we get a `Dream.handler` which can be used in a Dream app:
 ```ocaml
 let () = Dream.run ~interface:"0.0.0.0" ~port:8080 pages_handle
 ```
@@ -125,7 +141,7 @@ type t =
   [@@deriving router]
 ```
 
-## Defining routes with typed responses
+## Routes with typed responses
 
 It is possible to define routes with typed responses, with code automatically
 generated to turn such responses into JSON payloads and wrap into
