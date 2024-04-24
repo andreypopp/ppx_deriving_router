@@ -45,6 +45,6 @@ module All = struct
   type _ t =
     | Pages : Pages.t -> Ppx_deriving_router_runtime.response t
         [@prefix "/"]
-    | Api : 'a Api.t -> 'a t [@prefix "/api"]
+    | Api : 'a Api.t -> 'a t [@prefix "/nested/api"]
   [@@deriving router]
 end

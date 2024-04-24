@@ -52,7 +52,7 @@ val encode : 'a encode -> 'a -> response Lwt.t
 type 'v route =
   | Route : ('a, 'v) Routes.path * 'a * ('v -> 'w) -> 'w route
 
-val prefix_route : string option -> ('a -> 'b) -> 'a route -> 'b route
+val prefix_route : string list -> ('a -> 'b) -> 'a route -> 'b route
 val to_route : 'a route -> 'a Routes.route
 
 (** ROUTER *)

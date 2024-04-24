@@ -40,7 +40,7 @@ and path_segment = Ppath of string | Pparam of string * core_type
 type route = Leaf of leaf | Mount of mount
 
 and mount = {
-  m_prefix : string option;
+  m_prefix : string list;
   m_typ : longident loc;
   m_typ_param : label option;
   m_ctor : constructor_declaration;
@@ -221,15 +221,13 @@ let extract td =
         | `mount (m_typ, m_typ_param) ->
             let m_prefix =
               match Attribute.get attr_prefix ctor with
-              | None -> Some ctor.pcd_name.txt
-              | Some path -> (
+              | None -> [ ctor.pcd_name.txt ]
+              | Some path ->
                   let path = path.txt in
-                  let path =
-                    match String.chop_prefix ~pre:"/" path with
-                    | Some path -> path
-                    | None -> path
-                  in
-                  match path with "" -> None | path -> Some path)
+                  let path = String.split_on_char ~by:'/' path in
+                  List.filter_map path ~f:(function
+                    | "" -> None
+                    | x -> Some x)
             in
             let m_response = extract_mount_response ctor.pcd_res in
             Mount
@@ -451,7 +449,9 @@ module Derive_href = struct
           ->
             let prefix =
               estring ~loc
-                (match m_prefix with Some p -> "/" ^ p | None -> "")
+                (match m_prefix with
+                | [] -> ""
+                | p -> "/" ^ String.concat ~sep:"/" p)
             in
             let loc = m_ctor.pcd_loc in
             let p, x = match_ctor m_ctor in

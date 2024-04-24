@@ -125,10 +125,7 @@ let derive_mount td m =
                 Lwt.return [%e make_with_encode encode])
           in
           Ppx_deriving_router_runtime.prefix_route
-            [%e
-              match m.m_prefix with
-              | Some p -> [%expr Some [%e estring ~loc p]]
-              | None -> [%expr None]]
+            [%e elist ~loc (List.map m.m_prefix ~f:(estring ~loc))]
             f route)
         [%e routes]]
   in

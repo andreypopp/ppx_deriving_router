@@ -8,7 +8,7 @@
   /hello/world?modifier=uppercase
   /121
   /hello/world
-  /api/121
+  /nested/api/121
   # TESTING ROUTE MATCHING GENERATION
   ## GET /
   OK: HOME PAGE
@@ -44,5 +44,5 @@
   OK: Hello, world!
   ## GET /
   OK: HOME PAGE
-  ## GET /api/121
+  ## GET /nested/api/121
   OK: {"id":121}

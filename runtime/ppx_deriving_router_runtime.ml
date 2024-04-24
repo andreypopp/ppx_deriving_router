@@ -59,8 +59,13 @@ type 'v route =
 
 let prefix_route prefix f (Route (path, a, g)) =
   match prefix with
-  | None -> Route (path, a, fun x -> f (g x))
-  | Some prefix -> Route (Routes.(s prefix /~ path), a, fun x -> f (g x))
+  | [] -> Route (path, a, fun x -> f (g x))
+  | prefix ->
+      let rec prefix_path p = function
+        | [] -> p
+        | x :: xs -> prefix_path Routes.(s x /~ p) xs
+      in
+      Route (prefix_path path (List.rev prefix), a, fun x -> f (g x))
 
 let to_route (Route (path, a, f)) = Routes.(map f (route path a))
 
