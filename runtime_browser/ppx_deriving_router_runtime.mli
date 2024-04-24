@@ -3,6 +3,8 @@ type 'a url_path_decoder = string -> 'a option
 type 'a url_query_encoder = 'a -> string list
 type 'a url_query_decoder = string list -> 'a option
 
+module Witness : module type of Witness
+
 module Types : sig
   val string_to_url_path : string url_path_encoder
   val string_of_url_path : string url_path_decoder
@@ -29,3 +31,4 @@ val encode_query_key : Buffer.t -> string -> unit
 val encode_query_value : Buffer.t -> string -> unit
 
 type response = Fetch.Response.t
+type json = Js.Json.t

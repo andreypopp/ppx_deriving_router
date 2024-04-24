@@ -61,46 +61,12 @@ let derive_decode_response td param ctors =
              a Js.Promise.t ->
           [%e pexp_match ~loc [%expr route] cases]]
 
-let derive_body td routes =
-  let loc = td.ptype_loc in
-  let name = td.ptype_name.txt in
-  let t, we = td_newtype td [%type: string option] in
-  let name = mangle (Suffix "body") name in
-  let cases =
-    List.map routes ~f:(function
-      | Mount m ->
-          let loc = m.m_ctor.pcd_loc in
-          let p, x = match_ctor m.m_ctor in
-          let f =
-            evar ~loc
-              (Longident.name (mangle_lid (Suffix "body") m.m_typ.txt))
-          in
-          p --> [%expr [%e f] [%e x]]
-      | Leaf c ->
-          let loc = c.l_ctor.pcd_loc in
-          let p, x = match_ctor c.l_ctor in
-          let e =
-            match c.l_body with
-            | None -> [%expr None]
-            | Some (name, typ) ->
-                let body = pexp_field ~loc x { loc; txt = Lident name } in
-                [%expr
-                  let json = [%to_json: [%t typ]] [%e body] in
-                  let body = Js.Json.stringify json in
-                  Some body]
-          in
-
-          p --> e)
-  in
-  let e = we [%expr ([%e pexp_function ~loc cases] : [%t t])] in
-  [%stri let [%p pvar ~loc name] = [%e e]]
-
 let derive_router_td td =
   let _param, ctors = extract td in
   [
     Derive_href.derive td ctors;
     Derive_method.derive td ctors;
-    derive_body td ctors;
+    Derive_body.derive td ctors;
     derive_decode_response td _param ctors;
   ]
 

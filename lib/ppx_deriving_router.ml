@@ -4,6 +4,51 @@ open Ast_builder.Default
 open Ppx_deriving_router_common
 open Expansion_helpers
 
+module Derive_encode_response = struct
+  let suffix = "encode_response"
+  let mangle = mangle (Suffix suffix)
+  let mangle_lid = mangle_lid (Suffix suffix)
+
+  let derive td routes =
+    let loc = td.ptype_loc in
+    let name = td.ptype_name.txt in
+    let t, we =
+      td_newtype td (fun typ ->
+          let value_typ =
+            match typ with
+            | None -> [%type: Dream.response]
+            | Some txt -> ptyp_constr ~loc { loc; txt = Lident txt } []
+          in
+          [%type: [%t value_typ] -> Ppx_deriving_router_runtime.json])
+    in
+    let name = mangle name in
+    let cases =
+      List.map routes ~f:(function
+        | Mount m ->
+            let loc = m.m_ctor.pcd_loc in
+            let p, x = match_ctor m.m_ctor in
+            let f = evar ~loc (Longident.name (mangle_lid m.m_typ.txt)) in
+            p --> [%expr [%e f] [%e x] _value]
+        | Leaf c ->
+            let loc = c.l_ctor.pcd_loc in
+            let p, _x = match_ctor c.l_ctor in
+            let e =
+              match c.l_response with
+              | `response ->
+                  [%expr failwith "response cannot be serialized to json"]
+              | `json_response typ -> [%expr [%to_json: [%t typ]] _value]
+            in
+            p --> e)
+    in
+    let e =
+      we
+        [%expr
+          (fun route _value -> [%e pexp_match ~loc [%expr route] cases]
+            : [%t t])]
+    in
+    [%stri let [%p pvar ~loc name] = [%e e]]
+end
+
 let derive_path_name ctor =
   let name = ctor.pcd_name.txt in
   mangle (Prefix "path") name
@@ -310,41 +355,47 @@ let derive_router_td td =
       ]
   in
 
-  [%str
-    [%%i Derive_href.derive td ctors]
-    [%%i Derive_method.derive td ctors]
-    [%%i packed_stri]
-    [%%i handler_stri]
-
-    let [%p pvar ~loc (routes_name td)] =
-      [%e derive_routes td leafs mounts]
-
-    let [%p pvar ~loc (handle_name td)] =
-      let router =
-        Ppx_deriving_router_runtime.make
-          (let routes =
-             Stdlib.List.map Ppx_deriving_router_runtime.to_route
-               [%e evar ~loc (routes_name td)]
-           in
-           Routes.one_of routes)
-      in
-      fun ({ f } :
-            [%t
-              ptyp_constr ~loc { loc; txt = Lident (handler_name td) } []]) ->
-        Ppx_deriving_router_runtime.handle router
-          (fun
-            [%p
-              ppat_construct ~loc
-                { loc; txt = Lident (packed_ctor_name td) }
-                (Some [%pat? p, encode])]
-            req
-          ->
-            Lwt.bind (f p req) (Ppx_deriving_router_runtime.encode encode))
-
-    let [%p pvar ~loc (handle_name td)] =
-      [%e
-        match param with
-        | Some _ -> evar ~loc (handle_name td)
-        | None -> [%expr fun f -> [%e evar ~loc (handle_name td)] { f }]]]
+  [
+    Derive_href.derive td ctors;
+    Derive_method.derive td ctors;
+    Derive_body.derive td ctors;
+    Derive_encode_response.derive td ctors;
+    packed_stri;
+    handler_stri;
+    [%stri
+      let [%p pvar ~loc (routes_name td)] =
+        [%e derive_routes td leafs mounts]];
+    [%stri
+      let [%p pvar ~loc (handle_name td)] =
+        let router =
+          Ppx_deriving_router_runtime.make
+            (let routes =
+               Stdlib.List.map Ppx_deriving_router_runtime.to_route
+                 [%e evar ~loc (routes_name td)]
+             in
+             Routes.one_of routes)
+        in
+        fun ({ f } :
+              [%t
+                ptyp_constr ~loc
+                  { loc; txt = Lident (handler_name td) }
+                  []]) ->
+          Ppx_deriving_router_runtime.handle router
+            (fun
+              [%p
+                ppat_construct ~loc
+                  { loc; txt = Lident (packed_ctor_name td) }
+                  (Some [%pat? p, encode])]
+              req
+            ->
+              Lwt.bind (f p req)
+                (Ppx_deriving_router_runtime.encode encode))];
+    [%stri
+      let [%p pvar ~loc (handle_name td)] =
+        [%e
+          match param with
+          | Some _ -> evar ~loc (handle_name td)
+          | None -> [%expr fun f -> [%e evar ~loc (handle_name td)] { f }]]];
+  ]
 
 let () = register () ~derive:derive_router_td

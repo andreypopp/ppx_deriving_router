@@ -7,7 +7,7 @@ module Make_fetch (Route : sig
 
   val http_method : 'a t -> [ `GET | `POST | `PUT | `DELETE ]
   val href : 'a t -> string
-  val body : 'a t -> string option
+  val body : 'a t -> Js.Json.t option
   val decode_response : 'a t -> Fetch.Response.t -> 'a Js.Promise.t
 end) : sig
   val fetch :
@@ -29,7 +29,11 @@ end = struct
       ?redirect ?integrity ?keepalive ?signal ~root route =
     let href = root ^ Route.href route in
     let init =
-      let body = Option.map Fetch.BodyInit.make (Route.body route) in
+      let body =
+        match Route.body route with
+        | None -> None
+        | Some body -> Some (Fetch.BodyInit.make (Js.Json.stringify body))
+      in
       let method_ =
         match Route.http_method route with
         | `GET -> Fetch.Get

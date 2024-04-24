@@ -341,19 +341,24 @@ let register ~derive () =
 let td_newtype td ret_ty =
   let loc = td.ptype_loc in
   let name = td.ptype_name.txt in
-  let vs =
-    List.map td.ptype_params ~f:(fun _ -> gen_symbol ~prefix:"t" ())
+  let tp =
+    match td.ptype_params with
+    | [] -> None
+    | [ _ ] -> Some (gen_symbol ~prefix:"a" ())
+    | _ -> assert false
   in
   let t =
     ptyp_constr ~loc
       { txt = Lident name; loc }
-      (List.map vs ~f:(fun txt ->
-           ptyp_constr ~loc { txt = Lident txt; loc } []))
+      (match tp with
+      | None -> []
+      | Some txt -> [ ptyp_constr ~loc { txt = Lident txt; loc } [] ])
   in
-  let t = [%type: [%t t] -> [%t ret_ty]] in
+  let t = [%type: [%t t] -> [%t ret_ty tp]] in
   let we e =
-    List.fold_left vs ~init:e ~f:(fun acc txt ->
-        pexp_newtype ~loc { txt; loc } acc)
+    match tp with
+    | None -> e
+    | Some txt -> pexp_newtype ~loc { txt; loc } e
   in
   t, we
 
@@ -437,7 +442,7 @@ module Derive_href = struct
   let derive td (routes : route list) =
     let loc = td.ptype_loc in
     let name = td.ptype_name.txt in
-    let t, we = td_newtype td [%type: string] in
+    let t, we = td_newtype td (Fun.const [%type: string]) in
     let name = mangle (Suffix "href") name in
     let cases =
       List.map routes ~f:(function
@@ -480,7 +485,7 @@ module Derive_method = struct
     let loc = td.ptype_loc in
     let name = td.ptype_name.txt in
     let t, we =
-      td_newtype td [%type: [ `GET | `POST | `PUT | `DELETE ]]
+      td_newtype td (Fun.const [%type: [ `GET | `POST | `PUT | `DELETE ]])
     in
     let name = mangle (Suffix "http_method") name in
     let cases =
@@ -504,6 +509,45 @@ module Derive_method = struct
               | `POST -> [%expr `POST]
               | `DELETE -> [%expr `DELETE]
             in
+            p --> e)
+    in
+    let e = we [%expr ([%e pexp_function ~loc cases] : [%t t])] in
+    [%stri let [%p pvar ~loc name] = [%e e]]
+end
+
+module Derive_body = struct
+  let suffix = "body"
+  let mangle = mangle (Suffix suffix)
+  let mangle_lid = mangle_lid (Suffix suffix)
+
+  let derive td routes =
+    let loc = td.ptype_loc in
+    let name = td.ptype_name.txt in
+    let t, we =
+      td_newtype td
+        (Fun.const [%type: Ppx_deriving_router_runtime.json option])
+    in
+    let name = mangle name in
+    let cases =
+      List.map routes ~f:(function
+        | Mount m ->
+            let loc = m.m_ctor.pcd_loc in
+            let p, x = match_ctor m.m_ctor in
+            let f = evar ~loc (Longident.name (mangle_lid m.m_typ.txt)) in
+            p --> [%expr [%e f] [%e x]]
+        | Leaf c ->
+            let loc = c.l_ctor.pcd_loc in
+            let p, x = match_ctor c.l_ctor in
+            let e =
+              match c.l_body with
+              | None -> [%expr None]
+              | Some (name, typ) ->
+                  let body =
+                    pexp_field ~loc x { loc; txt = Lident name }
+                  in
+                  [%expr Some ([%to_json: [%t typ]] [%e body])]
+            in
+
             p --> e)
     in
     let e = we [%expr ([%e pexp_function ~loc cases] : [%t t])] in

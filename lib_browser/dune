@@ -1,6 +1,6 @@
 (library
  (name ppx_deriving_router_browser)
- (modules :standard \ ppx_deriving_router_runtime ppx_deriving_router_test)
+ (modules :standard \ ppx_deriving_router_test)
  (wrapped false)
  (public_name ppx_deriving_router.browser)
  (libraries uri ppxlib containers)
@@ -8,14 +8,6 @@
  (ppx_runtime_libraries ppx_deriving_router.browser_runtime)
  (preprocess
   (pps ppxlib.metaquot)))
-
-(library
- (name ppx_deriving_router_browser_runtime)
- (wrapped false)
- (modes melange)
- (modules ppx_deriving_router_runtime)
- (public_name ppx_deriving_router.browser_runtime)
- (libraries melange-fetch))
 
 (executable
  (name ppx_deriving_router_test)

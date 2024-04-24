@@ -1,6 +1,6 @@
 (library
  (name ppx_deriving_router)
- (modules :standard \ ppx_deriving_router_runtime ppx_deriving_router_test)
+ (modules :standard \ ppx_deriving_router_test)
  (wrapped false)
  (public_name ppx_deriving_router)
  (libraries uri ppxlib containers ppx_deriving_json.native)
@@ -8,12 +8,6 @@
  (ppx_runtime_libraries ppx_deriving_router.runtime)
  (preprocess
   (pps ppxlib.metaquot)))
-
-(library
- (name ppx_deriving_router_runtime)
- (modules ppx_deriving_router_runtime)
- (public_name ppx_deriving_router.runtime)
- (libraries containers dream routes ppx_deriving_json.native_runtime))
 
 (executable
  (name ppx_deriving_router_test)

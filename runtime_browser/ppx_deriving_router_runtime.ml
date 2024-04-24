@@ -3,6 +3,8 @@ type 'a url_path_decoder = string -> 'a option
 type 'a url_query_encoder = 'a -> string list
 type 'a url_query_decoder = string list -> 'a option
 
+module Witness = Witness
+
 module Types = struct
   let string_to_url_path x = x
   let string_of_url_path x = Some x
@@ -49,3 +51,4 @@ let encode_query_value out x =
   Buffer.add_string out (Js.Global.encodeURIComponent x)
 
 type response = Fetch.Response.t
+type json = Js.Json.t
