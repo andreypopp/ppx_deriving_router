@@ -69,5 +69,6 @@ let derive_router_td td =
     Derive_body.derive td ctors;
     derive_decode_response td _param ctors;
   ]
+  @ Derive_witness.derive td ctors
 
 let () = register () ~derive:derive_router_td

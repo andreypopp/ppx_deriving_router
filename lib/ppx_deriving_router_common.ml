@@ -553,3 +553,63 @@ module Derive_body = struct
     let e = we [%expr ([%e pexp_function ~loc cases] : [%t t])] in
     [%stri let [%p pvar ~loc name] = [%e e]]
 end
+
+module Derive_witness = struct
+  let suffix = "witness"
+  let ctor_mangle = mangle (Prefix suffix)
+  let mangle = mangle (Suffix suffix)
+  let mangle_lid = mangle_lid (Suffix suffix)
+
+  let derive td routes =
+    let loc = td.ptype_loc in
+    let name = td.ptype_name.txt in
+    let t, we =
+      td_newtype td (fun p ->
+          let a =
+            match p with
+            | None -> [%type: Ppx_deriving_router_runtime.response]
+            | Some p -> ptyp_constr ~loc { loc; txt = Lident p } []
+          in
+          [%type: [%t a] Ppx_deriving_router_runtime.Witness.t])
+    in
+    let name = mangle name in
+    let cases =
+      List.map routes ~f:(function
+        | Mount m ->
+            let loc = m.m_ctor.pcd_loc in
+            let p, x = match_ctor m.m_ctor in
+            let f = evar ~loc (Longident.name (mangle_lid m.m_typ.txt)) in
+            p --> [%expr [%e f] [%e x]]
+        | Leaf c ->
+            let loc = c.l_ctor.pcd_loc in
+            let p, _x = match_ctor c.l_ctor in
+            let e = evar ~loc (ctor_mangle c.l_ctor.pcd_name.txt) in
+            p --> e)
+    in
+    let e = we [%expr ([%e pexp_function ~loc cases] : [%t t])] in
+    let bnds =
+      List.filter_map routes ~f:(function
+        | Mount _ -> None
+        | Leaf c ->
+            let loc = c.l_ctor.pcd_loc in
+            let name = c.l_ctor.pcd_name.txt in
+            let pat = pvar ~loc (ctor_mangle name) in
+            let expr =
+              [%expr Ppx_deriving_router_runtime.Witness.create ()]
+            in
+            let t =
+              match c.l_response with
+              | `response -> [%type: Ppx_deriving_router_runtime.response]
+              | `json_response t -> t
+            in
+            Some
+              [%stri
+                let [%p pat] :
+                    [%t t] Ppx_deriving_router_runtime.Witness.t =
+                  [%e expr]])
+    in
+    [
+      [%stri open [%m pmod_structure ~loc bnds]];
+      [%stri let [%p pvar ~loc name] = [%e e]];
+    ]
+end

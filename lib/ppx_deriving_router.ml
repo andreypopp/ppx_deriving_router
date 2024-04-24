@@ -397,5 +397,6 @@ let derive_router_td td =
           | Some _ -> evar ~loc (handle_name td)
           | None -> [%expr fun f -> [%e evar ~loc (handle_name td)] { f }]]];
   ]
+  @ Derive_witness.derive td ctors
 
 let () = register () ~derive:derive_router_td
