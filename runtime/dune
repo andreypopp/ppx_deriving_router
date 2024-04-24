@@ -2,5 +2,3 @@
  (name ppx_deriving_router_runtime)
  (public_name ppx_deriving_router.runtime)
  (libraries containers dream routes ppx_deriving_json.native_runtime))
-
-
