@@ -23,7 +23,7 @@ Add preprocessing configuration in `dune`:
 Define routes:
 ```ocaml
 module Pages = struct
-  open Ppx_deriving_router_runtime.Types
+  open Ppx_deriving_router_runtime.Primitives
 
   type t =
     | Home [@GET "/"]
@@ -111,7 +111,7 @@ val T_of_url_query : string list -> T option
 val T_to_url_query : T -> string list
 ```
 
-The default encoders/decoders are provided in `Ppx_deriving_router_runtime.Types` module
+The default encoders/decoders are provided in `Ppx_deriving_router_runtime.Primitives` module
 (this is why we need to `open` the module when defining routes).
 
 To provide custom encoders/decoders for a custom type, we can define own
@@ -152,7 +152,7 @@ response type:
 
 ```ocaml
 module Api = struct
-  open Ppx_deriving_router_runtime.Types
+  open Ppx_deriving_router_runtime.Primitives
   open Ppx_deriving_json_runtime.Primitives
 
   type user = { id : int } [@@deriving json]
