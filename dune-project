@@ -11,10 +11,11 @@
 
 (maintainers "Andrey Popp")
 
-(license LICENSE)
+(license MIT)
 
 (package
  (name ppx_deriving_router)
+ (synopsis "Derive typesafe router from type declarations")
  (depends
   (ocaml
    (>= 4.14))

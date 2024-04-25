@@ -15,4 +15,4 @@
  (libraries ppx_deriving_router_browser))
 
 (copy_files#
- (files ../lib/ppx_deriving_router_common.ml))
+ (files ../../native/lib/ppx_deriving_router_common.ml))

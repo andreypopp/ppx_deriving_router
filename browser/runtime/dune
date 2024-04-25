@@ -6,4 +6,4 @@
  (libraries melange-fetch))
 
 (copy_files#
- (files ../runtime/witness.ml*))
+ (files ../../native/runtime/witness.ml*))

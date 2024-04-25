@@ -1,5 +1,5 @@
 
-  $ node ./js/test_browser/test.js test
+  $ node ./js/browser/test/test.js test
   # TESTING HREF GENERATION
   /
   /Route_with_implicit_path
