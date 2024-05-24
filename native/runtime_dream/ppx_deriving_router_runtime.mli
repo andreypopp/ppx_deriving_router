@@ -1,3 +1,11 @@
+type json = Ppx_deriving_json_runtime.t
+type request = Dream.request
+type response = Dream.response
+
+val queries : request -> string -> string list
+val body : request -> string Lwt.t
+val method_ : request -> [ `DELETE | `GET | `POST | `PUT ]
+
 (** REQUEST DECODING *)
 
 type 'a url_path_encoder = 'a -> string
@@ -17,9 +25,6 @@ exception Invalid_body of string
 val encode_path : Buffer.t -> string -> unit
 val encode_query_key : Buffer.t -> string -> unit
 val encode_query_value : Buffer.t -> string -> unit
-
-type response = Dream.response
-type json = Ppx_deriving_json_runtime.t
 
 type _ encode =
   | Encode_raw : response encode

@@ -1,0 +1,5 @@
+(library
+ (name ppx_deriving_router_runtime_dream)
+ (public_name ppx_deriving_router_dream)
+ (wrapped false)
+ (libraries containers dream routes ppx_deriving_json.native_runtime))

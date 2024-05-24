@@ -23,8 +23,19 @@
   ppxlib
   containers
   routes
-  dream
   melange
   melange-fetch
+  ppx_deriving_json
+  uri))
+
+(package
+ (name ppx_deriving_router_dream)
+ (synopsis "Dream runtime")
+ (depends
+  (ocaml
+   (>= 4.14))
+  dune
+  routes
+  dream
   ppx_deriving_json
   uri))

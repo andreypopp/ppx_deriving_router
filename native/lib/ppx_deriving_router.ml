@@ -16,7 +16,7 @@ module Derive_encode_response = struct
       td_newtype td (fun typ ->
           let value_typ =
             match typ with
-            | None -> [%type: Dream.response]
+            | None -> [%type: Ppx_deriving_router_runtime.response]
             | Some txt -> ptyp_constr ~loc { loc; txt = Lident txt } []
           in
           [%type: [%t value_typ] -> Ppx_deriving_router_runtime.json])
@@ -74,17 +74,19 @@ let td_to_ty_handler param td =
         [ { loc; txt = param_name } ]
         [%type:
           [%t td_to_ty (Some param) td] ->
-          Dream.request ->
+          Ppx_deriving_router_runtime.request ->
           [%t param] Lwt.t]
   | None ->
       [%type:
-        [%t td_to_ty param td] -> Dream.request -> Dream.response Lwt.t]
+        [%t td_to_ty param td] ->
+        Ppx_deriving_router_runtime.request ->
+        Ppx_deriving_router_runtime.response Lwt.t]
 
 let td_to_ty_enc param td =
   let loc = td.ptype_loc in
   let result =
     match param with
-    | None -> [%type: Dream.response]
+    | None -> [%type: Ppx_deriving_router_runtime.response]
     | Some param -> param
   in
   [%type: [%t result] Ppx_deriving_router_runtime.encode]
@@ -192,7 +194,8 @@ let derive_path td (exemplar, ctors) =
                   let value =
                     [%expr
                       let v =
-                        Dream.queries [%e req] [%e estring ~loc name]
+                        Ppx_deriving_router_runtime.queries [%e req]
+                          [%e estring ~loc name]
                       in
                       match [%e of_url] v with
                       | Some v -> v
@@ -233,7 +236,7 @@ let derive_path td (exemplar, ctors) =
                 let args = (name, ebody) :: args in
                 [%expr
                   Lwt.bind
-                    (Dream.body [%e req])
+                    (Ppx_deriving_router_runtime.body [%e req])
                     (fun [%p pbody] ->
                       let [%p pbody] =
                         try Yojson.Basic.from_string [%e ebody]
@@ -254,8 +257,11 @@ let derive_path td (exemplar, ctors) =
     in
     let make =
       [%expr
-        fun ([%p preq] : Dream.request) ->
-          [%e pexp_match ~loc [%expr Dream.method_ [%e req]] by_method]]
+        fun ([%p preq] : Ppx_deriving_router_runtime.request) ->
+          [%e
+            pexp_match ~loc
+              [%expr Ppx_deriving_router_runtime.method_ [%e req]]
+              by_method]]
     in
     List.fold_left (List.rev params) ~init:make ~f:(fun body param ->
         pexp_fun ~loc Nolabel None (pvar ~loc param) body)

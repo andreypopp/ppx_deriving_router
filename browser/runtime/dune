@@ -6,7 +6,7 @@
  (libraries melange-fetch))
 
 (copy_files#
- (files ../../native/runtime/ppx_deriving_router_witness.ml*))
+ (files ../../native/runtime_dream/ppx_deriving_router_witness.ml*))
 
 (copy_files#
- (files ../../native/runtime/ppx_deriving_router_primitives.ml*))
+ (files ../../native/runtime_dream/ppx_deriving_router_primitives.ml*))

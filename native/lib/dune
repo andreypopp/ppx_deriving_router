@@ -5,7 +5,6 @@
  (public_name ppx_deriving_router)
  (libraries uri ppxlib containers ppx_deriving_json.native)
  (kind ppx_deriver)
- (ppx_runtime_libraries ppx_deriving_router.runtime)
  (preprocess
   (pps ppxlib.metaquot)))
 

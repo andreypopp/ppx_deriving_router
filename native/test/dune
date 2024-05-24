@@ -1,6 +1,6 @@
 (executable
  (name test)
- (libraries dream)
+ (libraries dream ppx_deriving_router_dream)
  (preprocess
   (pps ppx_deriving_router ppx_deriving_json.native)))
 

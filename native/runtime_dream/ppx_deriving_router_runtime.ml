@@ -1,3 +1,18 @@
+type json = Ppx_deriving_json_runtime.t
+type response = Dream.response
+type request = Dream.request
+
+let queries = Dream.queries
+let body = Dream.body
+
+let method_ req =
+  match Dream.method_ req with
+  | `GET -> `GET
+  | `POST -> `POST
+  | `PUT -> `PUT
+  | `DELETE -> `DELETE
+  | _ -> failwith "Unsupported method"
+
 module Witness = Ppx_deriving_router_witness
 module Primitives = Ppx_deriving_router_primitives
 
@@ -33,9 +48,6 @@ let prefix_route prefix f (Route (path, a, g)) =
       Route (prefix_path path (List.rev prefix), a, fun x -> f (g x))
 
 let to_route (Route (path, a, f)) = Routes.(map f (route path a))
-
-type json = Ppx_deriving_json_runtime.t
-type response = Dream.response
 
 type _ encode =
   | Encode_raw : response encode
