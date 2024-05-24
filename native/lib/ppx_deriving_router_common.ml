@@ -98,7 +98,9 @@ let attr_prefix =
 
 let attr_body =
   let name = "router.body" in
-  Attribute.declare_flag name Attribute.Context.Label_declaration
+  let context = Attribute.Context.Label_declaration in
+  let payload_pattern = Ast_pattern.(pstr nil) in
+  Attribute.declare name context payload_pattern ()
 
 let to_supported_arg_type (t : core_type) =
   let loc = t.ptyp_loc in
@@ -252,9 +254,9 @@ let extract td =
             in
             let lds, l_body =
               List.partition_filter_map lds ~f:(fun ld ->
-                  match Attribute.has_flag attr_body ld with
-                  | false -> `Left ld
-                  | true -> `Right ld)
+                  match Attribute.get attr_body ld with
+                  | None -> `Left ld
+                  | Some () -> `Right ld)
             in
             let l_body =
               match l_body, l_method_ with
