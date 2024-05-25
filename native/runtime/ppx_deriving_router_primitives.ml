@@ -21,6 +21,16 @@ let string_of_url_query k xs =
     | None -> Error "missing value"
     | Some x -> Ok x)
 
+let float_to_url_query k x = [ k, string_of_float x ]
+
+let float_of_url_query k xs =
+  last_wins k xs (function
+    | None -> Error "missing value"
+    | Some x -> (
+        match float_of_string_opt x with
+        | None -> Error "not a float value"
+        | Some x -> Ok x))
+
 let int_to_url_query k x = [ k, string_of_int x ]
 
 let int_of_url_query k xs =
