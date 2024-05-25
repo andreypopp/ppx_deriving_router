@@ -385,12 +385,12 @@ module Derive_href = struct
                     Stdlib.List.iter
                       (fun (name, value) ->
                         Buffer.add_char [%e out] ![%e sep];
-                        Ppx_deriving_router_runtime.encode_query_key
-                          [%e out] name;
+                        Ppx_deriving_router_runtime.Encode
+                        .encode_query_key [%e out] name;
                         [%e sep] := '&';
                         Buffer.add_char [%e out] '=';
-                        Ppx_deriving_router_runtime.encode_query_value
-                          [%e out] value)
+                        Ppx_deriving_router_runtime.Encode
+                        .encode_query_value [%e out] value)
                       ([%e derive_conv "to_url_query" typ]
                          [%e estring ~loc name] [%e value])]
                 in
@@ -407,14 +407,15 @@ module Derive_href = struct
               | Ppath x ->
                   [%expr
                     Buffer.add_char [%e out] '/';
-                    Ppx_deriving_router_runtime.encode_path [%e out]
-                      [%e estring ~loc x];
+                    Ppx_deriving_router_runtime.Encode.encode_path
+                      [%e out] [%e estring ~loc x];
                     [%e acc]]
               | Pparam (x, typ) ->
                   let to_url = derive_conv "to_url_path" typ in
                   [%expr
                     Buffer.add_char [%e out] '/';
-                    Ppx_deriving_router_runtime.encode_path [%e out]
+                    Ppx_deriving_router_runtime.Encode.encode_path
+                      [%e out]
                       ([%e to_url] [%e evar ~loc x]);
                     [%e acc]])
         in

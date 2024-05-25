@@ -1,17 +1,22 @@
-type 'a url_path_encoder = 'a -> string
-type 'a url_path_decoder = string -> 'a option
-type 'a url_query_encoder = 'a -> string list
-type 'a url_query_decoder = string list -> 'a option
+type json = Js.Json.t
+type response = Fetch.Response.t
+
+module Encode : sig
+  type 'a encode_url_path = 'a -> string
+  type 'a encode_url_query = 'a -> string list
+
+  val encode_path : Buffer.t -> string -> unit
+  val encode_query_key : Buffer.t -> string -> unit
+  val encode_query_value : Buffer.t -> string -> unit
+end
+
+module Decode : sig
+  type 'a decode_url_path = string -> 'a option
+  type 'a decode_url_query = string list -> 'a option
+end
 
 module Witness : module type of Ppx_deriving_router_witness
 module Primitives : module type of Ppx_deriving_router_primitives
-
-val encode_path : Buffer.t -> string -> unit
-val encode_query_key : Buffer.t -> string -> unit
-val encode_query_value : Buffer.t -> string -> unit
-
-type response = Fetch.Response.t
-type json = Js.Json.t
 
 module Make_fetch (Route : sig
   type 'a t

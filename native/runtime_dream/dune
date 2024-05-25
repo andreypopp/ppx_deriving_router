@@ -3,3 +3,6 @@
  (public_name ppx_deriving_router_dream)
  (wrapped false)
  (libraries containers dream routes ppx_deriving_json.native_runtime))
+
+(copy_files# (files ../runtime/*.ml))
+(copy_files# (files ../runtime/*.mli))

@@ -1,22 +1,28 @@
-type 'a url_path_encoder = 'a -> string
-type 'a url_path_decoder = string -> 'a option
-type 'a url_query_encoder = 'a -> string list
-type 'a url_query_decoder = string list -> 'a option
+type json = Js.Json.t
+
+module Encode = struct
+  type 'a encode_url_path = 'a -> string
+  type 'a encode_url_query = 'a -> string list
+
+  let encode_path out x =
+    Buffer.add_string out (Js.Global.encodeURIComponent x)
+
+  let encode_query_key out x =
+    Buffer.add_string out (Js.Global.encodeURIComponent x)
+
+  let encode_query_value out x =
+    Buffer.add_string out (Js.Global.encodeURIComponent x)
+end
+
+module Decode = struct
+  type 'a decode_url_path = string -> 'a option
+  type 'a decode_url_query = string list -> 'a option
+end
 
 module Witness = Ppx_deriving_router_witness
 module Primitives = Ppx_deriving_router_primitives
 
-let encode_path out x =
-  Buffer.add_string out (Js.Global.encodeURIComponent x)
-
-let encode_query_key out x =
-  Buffer.add_string out (Js.Global.encodeURIComponent x)
-
-let encode_query_value out x =
-  Buffer.add_string out (Js.Global.encodeURIComponent x)
-
 type response = Fetch.Response.t
-type json = Js.Json.t
 
 module Make_fetch (Route : sig
   type 'a t
