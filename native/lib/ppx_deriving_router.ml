@@ -75,12 +75,14 @@ let td_to_ty_handler param td =
         [%type:
           [%t td_to_ty (Some param) td] ->
           Ppx_deriving_router_runtime.request ->
-          [%t param] Lwt.t]
+          [%t param] Ppx_deriving_router_runtime.return Lwt.t]
   | None ->
       [%type:
         [%t td_to_ty param td] ->
         Ppx_deriving_router_runtime.request ->
-        Ppx_deriving_router_runtime.response Lwt.t]
+        Ppx_deriving_router_runtime.response
+        Ppx_deriving_router_runtime.return
+        Lwt.t]
 
 let td_to_ty_enc param td =
   let loc = td.ptype_loc in

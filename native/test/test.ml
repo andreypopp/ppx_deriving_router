@@ -1,13 +1,15 @@
 open Routing
 open Lwt.Infix
 
+let return = Ppx_deriving_router_runtime.Return.return
+
 let pages_handle route _req =
   match route with
-  | Pages.Home -> Dream.html "HOME PAGE"
+  | Pages.Home -> return (Dream.response "HOME PAGE")
   | Route_with_implicit_path { param } ->
       let param = Option.value ~default:"-" param in
-      Dream.html ("works as well, param is: " ^ param)
-  | Route_with_implicit_path_post -> Dream.html "posted"
+      return (Dream.response ("works as well, param is: " ^ param))
+  | Route_with_implicit_path_post -> return (Dream.response "posted")
   | Hello { name; modifier } ->
       let name =
         match modifier with
@@ -16,22 +18,29 @@ let pages_handle route _req =
         | Some Lowercase -> String.lowercase_ascii name
       in
       let greeting = Printf.sprintf "Hello, %s!" name in
-      Dream.html greeting
+      return (Dream.response greeting)
 
 let pages_handler = Pages.handle pages_handle
 
-let api_handle : type a. a Api.t -> Dream.request -> a Lwt.t =
+let api_handle :
+    type a.
+    a Api.t -> Dream.request -> a Ppx_deriving_router_runtime.return Lwt.t
+    =
  fun x _req ->
   match x with
-  | Raw_response -> Dream.respond "RAW RESPONSE"
-  | List_users -> Lwt.return []
-  | Create_user { id } -> Lwt.return { Api.id }
-  | Get_user { id } -> Lwt.return { Api.id }
+  | Raw_response -> return (Dream.response "RAW RESPONSE")
+  | List_users -> return []
+  | Create_user { id } -> return { Api.id }
+  | Get_user { id } -> return { Api.id }
 
 let api_handler : Dream.handler = Api.handle { f = api_handle }
 
 let all_handler : Dream.handler =
-  let f : type a. a All.t -> Dream.request -> a Lwt.t =
+  let f :
+      type a.
+      a All.t ->
+      Dream.request ->
+      a Ppx_deriving_router_runtime.return Lwt.t =
    fun x req ->
     match x with
     | Pages p -> pages_handle p req
