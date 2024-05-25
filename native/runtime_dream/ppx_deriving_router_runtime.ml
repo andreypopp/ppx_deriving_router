@@ -18,7 +18,8 @@ open struct
   module Response = struct
     type t = Dream.response
 
-    let respond ~status body = Dream.respond ~status body
+    let respond ~status ~headers body =
+      Dream.respond ~status ~headers body
   end
 end
 

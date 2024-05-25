@@ -3,24 +3,33 @@ type http_method = [ `DELETE | `GET | `POST | `PUT ]
 type http_status =
   [ `Not_Found | `Bad_Request | `Method_Not_Allowed | `OK ]
 
+module type REQUEST = sig
+  type t
+
+  val path : t -> string
+  val queries : t -> (string * string) list
+  val body : t -> string Lwt.t
+  val method_ : t -> http_method
+end
+
+module type RESPONSE = sig
+  type t
+
+  val respond :
+    status:http_status ->
+    headers:(string * string) list ->
+    string ->
+    t Lwt.t
+end
+
 module type S = sig
   type json = Yojson.Basic.t
 
-  module Request : sig
-    type t
-
-    val queries : t -> (string * string) list
-    val body : t -> string Lwt.t
-    val method_ : t -> http_method
-  end
+  module Request : REQUEST
 
   type request = Request.t
 
-  module Response : sig
-    type t
-
-    val respond : status:http_status -> string -> t Lwt.t
-  end
+  module Response : RESPONSE
 
   type response = Response.t
 
@@ -71,18 +80,7 @@ module type S = sig
   end
 end
 
-module Make (Request : sig
-  type t
-
-  val path : t -> string
-  val queries : t -> (string * string) list
-  val body : t -> string Lwt.t
-  val method_ : t -> http_method
-end) (Response : sig
-  type t
-
-  val respond : status:http_status -> string -> t Lwt.t
-end) :
+module Make (Request : REQUEST) (Response : RESPONSE) :
   S with type Request.t = Request.t and type Response.t = Response.t =
 struct
   type json = Yojson.Basic.t
@@ -111,6 +109,7 @@ struct
       | Encode_raw, x -> Lwt.return x
       | Encode_json to_json, x ->
           Response.respond ~status:`OK
+            ~headers:[ "Content-Type", "application/json" ]
             (Yojson.Basic.to_string (to_json x))
 
     type 'v route =
@@ -152,15 +151,16 @@ struct
       Lwt.bind (dispatch router req) (function
         | `Ok v -> f v req
         | `Invalid_query_parameter (param, msg) ->
-            Response.respond ~status:`Bad_Request
+            Response.respond ~status:`Bad_Request ~headers:[]
               (Printf.sprintf "error processing query parameter %S: %s"
                  param msg)
         | `Invalid_body reason ->
-            Response.respond ~status:`Bad_Request
+            Response.respond ~status:`Bad_Request ~headers:[]
               (Printf.sprintf "Invalid or missing request body: %s" reason)
         | `Method_not_allowed ->
-            Response.respond ~status:`Method_Not_Allowed
+            Response.respond ~status:`Method_Not_Allowed ~headers:[]
               "Method not allowed"
-        | `Not_found -> Response.respond ~status:`Not_Found "Not found")
+        | `Not_found ->
+            Response.respond ~status:`Not_Found ~headers:[] "Not found")
   end
 end
