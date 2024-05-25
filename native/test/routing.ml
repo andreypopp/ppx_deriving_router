@@ -4,15 +4,16 @@ type modifier =
       (** this a custom type which we want to be able to serialize/deserialize
           from/to the URL query *)
 
-let rec modifier_of_url_query = function
-  | [] -> None
-  | [ "uppercase" ] -> Some Uppercase
-  | [ "lowercase" ] -> Some Lowercase
-  | _ :: rest -> modifier_of_url_query rest (* last wins, if multiple *)
+let modifier_of_url_query k xs =
+  match List.assoc_opt k xs with
+  | Some "uppercase" -> Ok Uppercase
+  | Some "lowercase" -> Ok Lowercase
+  | Some _ -> Error "invalid modifier"
+  | None -> Error "missing modifier"
 
-let modifier_to_url_query = function
-  | Uppercase -> [ "uppercase" ]
-  | Lowercase -> [ "lowercase" ]
+let modifier_to_url_query k = function
+  | Uppercase -> [ k, "uppercase" ]
+  | Lowercase -> [ k, "lowercase" ]
 
 module Pages = struct
   open Ppx_deriving_router_runtime.Primitives

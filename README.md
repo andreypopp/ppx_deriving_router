@@ -107,8 +107,8 @@ val T_to_url_path : T -> string
 
 If `T` is a query parameter:
 ```ocaml
-val T_of_url_query : string list -> T option
-val T_to_url_query : T -> string list
+val T_of_url_query : string -> (string * string) list -> (T, string) result
+val T_to_url_query : string -> T -> (string * string) list
 ```
 
 The default encoders/decoders are provided in `Ppx_deriving_router_runtime.Primitives` module
@@ -121,15 +121,17 @@ functions, for example:
 module Modifier = struct
   type t = Capitalize | Uppercase
 
-  let rec of_url_query : t Ppx_deriving_router_runtime.url_query_decoder = function
-    | [] -> None
-    | [ "capitalize" ] -> Some Capitalize
-    | [ "uppercase" ] -> Some Uppercase
-    | _ :: xs -> of_url_query xs (* let the last one win *)
+  let rec of_url_query : t Ppx_deriving_router_runtime.url_query_decoder = fun k qs ->
+    match List.assoc_opt k qs with
+    | None -> Error "missing modifier"
+    | Some "capitalize" -> Ok Capitalize
+    | Some "uppercase" -> Ok Uppercase
+    | Some _ -> Error "unknown modifier"
 
-  let to_url_query : t Ppx_deriving_router_runtime.url_query_encoder = function
-    | Capitalize -> [ "capitalize" ]
-    | Uppercase -> [ "uppercase" ]
+  let to_url_query : t Ppx_deriving_router_runtime.url_query_encoder = fun k v ->
+    match v with
+    | Capitalize -> [ k, "capitalize" ]
+    | Uppercase -> [ k, "uppercase" ]
 end
 ```
 

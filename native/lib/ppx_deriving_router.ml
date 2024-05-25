@@ -193,17 +193,15 @@ let derive_path td (exemplar, ctors) =
                   let of_url = derive_conv "of_url_query" typ in
                   let value =
                     [%expr
-                      let v =
-                        Ppx_deriving_router_runtime.queries [%e req]
-                          [%e estring ~loc name]
-                      in
-                      match [%e of_url] v with
-                      | Some v -> v
-                      | None ->
+                      match
+                        [%e of_url] [%e estring ~loc name] __url_query
+                      with
+                      | Ok v -> v
+                      | Error err ->
                           raise
                             (Ppx_deriving_router_runtime
                              .Invalid_query_parameter
-                               ([%e estring ~loc name], v))]
+                               ([%e estring ~loc name], err))]
                   in
                   Some (field_name, value))
           in
@@ -252,7 +250,13 @@ let derive_path td (exemplar, ctors) =
                       in
                       Lwt.return [%e make args])]
           in
-
+          let expr =
+            [%expr
+              let __url_query =
+                Ppx_deriving_router_runtime.queries [%e req]
+              in
+              [%e expr]]
+          in
           (pat --> expr) :: cases)
     in
     let make =

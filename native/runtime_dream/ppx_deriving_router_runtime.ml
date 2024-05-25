@@ -2,7 +2,7 @@ type json = Ppx_deriving_json_runtime.t
 type response = Dream.response
 type request = Dream.request
 
-let queries = Dream.queries
+let queries = Dream.all_queries
 let body = Dream.body
 
 let method_ req =
@@ -18,8 +18,10 @@ module Primitives = Ppx_deriving_router_primitives
 
 type 'a url_path_encoder = 'a -> string
 type 'a url_path_decoder = string -> 'a option
-type 'a url_query_encoder = 'a -> string list
-type 'a url_query_decoder = string list -> 'a option
+type 'a url_query_encoder = string -> 'a -> (string * string) list
+
+type 'a url_query_decoder =
+  string -> (string * string) list -> ('a, string) result
 
 let encode_path out x =
   Buffer.add_string out (Uri.pct_encode ~component:`Path x)
@@ -31,7 +33,7 @@ let encode_query_value out x =
   Buffer.add_string out (Uri.pct_encode ~component:`Query_value x)
 
 exception Method_not_allowed
-exception Invalid_query_parameter of string * string list
+exception Invalid_query_parameter of string * string
 exception Invalid_body of string
 
 type 'v route =
@@ -83,9 +85,10 @@ let dispatch (router : _ router) req =
 let handle (router : _ router) f req =
   Lwt.bind (dispatch router req) (function
     | `Ok v -> f v req
-    | `Invalid_query_parameter (param, _) ->
+    | `Invalid_query_parameter (param, msg) ->
         Dream.respond ~status:`Bad_Request
-          (Printf.sprintf "Invalid or missing query parameter: %s" param)
+          (Printf.sprintf "error processing query parameter %S: %s" param
+             msg)
     | `Invalid_body reason ->
         Dream.respond ~status:`Bad_Request
           (Printf.sprintf "Invalid or missing request body: %s" reason)

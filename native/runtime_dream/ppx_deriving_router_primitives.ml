@@ -7,23 +7,46 @@ let bool_to_url_path x = if x then "true" else "false"
 let bool_of_url_path x =
   match x with "true" -> Some true | "false" -> Some false | _ -> None
 
-let rec last_wins f = function
-  | [] -> None
-  | [ x ] -> f x
-  | _ :: xs -> last_wins f xs
+let rec last_wins acc k xs f =
+  match xs with
+  | (k', x) :: xs when String.equal k k' -> last_wins (Some x) k xs f
+  | _ :: xs -> last_wins acc k xs f
+  | [] -> f acc
 
-let string_to_url_query x = [ x ]
-let string_of_url_query x = last_wins (fun x -> Some x) x
-let int_to_url_query x = [ string_of_int x ]
-let int_of_url_query = last_wins int_of_string_opt
-let bool_to_url_query x = if x then [ "true" ] else []
+let last_wins k xs f = last_wins None k xs f
+let string_to_url_query k x = [ k, x ]
 
-let bool_of_url_query =
-  last_wins (function "true" -> Some true | _ -> Some false)
+let string_of_url_query k xs =
+  last_wins k xs (function
+    | None -> Error "missing value"
+    | Some x -> Ok x)
 
-let option_to_url_query f x = match x with None -> [] | Some v -> f v
+let int_to_url_query k x = [ k, string_of_int x ]
 
-let option_of_url_query f x =
-  match x with
-  | [] -> Some None
-  | x -> ( match f x with None -> None | Some v -> Some (Some v))
+let int_of_url_query k xs =
+  last_wins k xs (function
+    | None -> Error "missing value"
+    | Some x -> (
+        match int_of_string_opt x with
+        | None -> Error "not an integer value"
+        | Some x -> Ok x))
+
+let bool_to_url_query k x = if x then [ k, "true" ] else []
+
+let bool_of_url_query k xs =
+  last_wins k xs (function
+    | None -> Ok false
+    | Some "true" -> Ok true
+    | Some "false" -> Ok false
+    | _ -> Error "not a boolean value (true, false)")
+
+let option_to_url_query f k x =
+  match x with None -> [] | Some v -> f k v
+
+let option_of_url_query f k xs =
+  last_wins k xs (function
+    | None -> Ok None
+    | Some v -> (
+        match f k [ k, v ] with
+        | Ok v -> Ok (Some v)
+        | Error err -> Error err))

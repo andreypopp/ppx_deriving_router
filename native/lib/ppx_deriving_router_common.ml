@@ -383,15 +383,16 @@ module Derive_href = struct
                 let write =
                   [%expr
                     Stdlib.List.iter
-                      (fun value ->
+                      (fun (name, value) ->
                         Buffer.add_char [%e out] ![%e sep];
                         Ppx_deriving_router_runtime.encode_query_key
-                          [%e out] [%e estring ~loc name];
+                          [%e out] name;
                         [%e sep] := '&';
                         Buffer.add_char [%e out] '=';
                         Ppx_deriving_router_runtime.encode_query_value
                           [%e out] value)
-                      ([%e derive_conv "to_url_query" typ] [%e value])]
+                      ([%e derive_conv "to_url_query" typ]
+                         [%e estring ~loc name] [%e value])]
                 in
                 [%expr
                   [%e write];

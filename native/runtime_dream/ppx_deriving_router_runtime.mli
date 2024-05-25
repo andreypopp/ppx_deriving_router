@@ -2,7 +2,7 @@ type json = Ppx_deriving_json_runtime.t
 type request = Dream.request
 type response = Dream.response
 
-val queries : request -> string -> string list
+val queries : request -> (string * string) list
 val body : request -> string Lwt.t
 val method_ : request -> [ `DELETE | `GET | `POST | `PUT ]
 
@@ -10,14 +10,16 @@ val method_ : request -> [ `DELETE | `GET | `POST | `PUT ]
 
 type 'a url_path_encoder = 'a -> string
 type 'a url_path_decoder = string -> 'a option
-type 'a url_query_encoder = 'a -> string list
-type 'a url_query_decoder = string list -> 'a option
+type 'a url_query_encoder = string -> 'a -> (string * string) list
+
+type 'a url_query_decoder =
+  string -> (string * string) list -> ('a, string) result
 
 module Primitives : module type of Ppx_deriving_router_primitives
 module Witness : module type of Ppx_deriving_router_witness
 
 exception Method_not_allowed
-exception Invalid_query_parameter of string * string list
+exception Invalid_query_parameter of string * string
 exception Invalid_body of string
 
 (** RESPONSE ENCODING *)
@@ -52,7 +54,7 @@ val handle : 'a router -> ('a -> Dream.handler) -> Dream.handler
 val dispatch :
   'a router ->
   Dream.request ->
-  [ `Invalid_query_parameter of string * string list
+  [ `Invalid_query_parameter of string * string
   | `Invalid_body of string
   | `Method_not_allowed
   | `Not_found
