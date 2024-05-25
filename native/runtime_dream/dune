@@ -2,7 +2,7 @@
  (name ppx_deriving_router_runtime_dream)
  (public_name ppx_deriving_router_dream)
  (wrapped false)
- (libraries containers dream routes ppx_deriving_json.native_runtime))
-
-(copy_files# (files ../runtime/*.ml))
-(copy_files# (files ../runtime/*.mli))
+ (libraries
+  dream
+  ppx_deriving_router.runtime_lib
+  ppx_deriving_json.native_runtime))

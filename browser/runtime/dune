@@ -5,5 +5,8 @@
  (public_name ppx_deriving_router.browser_runtime)
  (libraries melange-fetch))
 
-(copy_files# (files ../../native/runtime/ppx_deriving_router_witness.ml*))
-(copy_files# (files ../../native/runtime/ppx_deriving_router_primitives.ml*))
+(copy_files#
+ (files ../../native/runtime/ppx_deriving_router_witness.ml*))
+
+(copy_files#
+ (files ../../native/runtime/ppx_deriving_router_primitives.ml*))

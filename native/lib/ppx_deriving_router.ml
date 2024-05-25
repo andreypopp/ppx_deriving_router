@@ -89,7 +89,7 @@ let td_to_ty_enc param td =
     | None -> [%type: Ppx_deriving_router_runtime.response]
     | Some param -> param
   in
-  [%type: [%t result] Ppx_deriving_router_runtime.Response.encode]
+  [%type: [%t result] Ppx_deriving_router_runtime.Handle.encode]
 
 let derive_mount td m =
   let loc = m.m_ctor.pcd_loc in
@@ -117,8 +117,7 @@ let derive_mount td m =
     let encode =
       match m.m_response with
       | `passthrough -> [%expr _encode]
-      | `response ->
-          [%expr Ppx_deriving_router_runtime.Response.Encode_raw]
+      | `response -> [%expr Ppx_deriving_router_runtime.Handle.Encode_raw]
     in
     [%expr
       Stdlib.List.map
@@ -211,10 +210,10 @@ let derive_path td (exemplar, ctors) =
           let to_response =
             match leaf.l_response with
             | `response ->
-                [%expr Ppx_deriving_router_runtime.Response.Encode_raw]
+                [%expr Ppx_deriving_router_runtime.Handle.Encode_raw]
             | `json_response t ->
                 [%expr
-                  Ppx_deriving_router_runtime.Response.Encode_json
+                  Ppx_deriving_router_runtime.Handle.Encode_json
                     [%to_json: [%t t]]]
           in
           let make args =
@@ -404,7 +403,7 @@ let derive_router_td td =
               req
             ->
               Lwt.bind (f p req)
-                (Ppx_deriving_router_runtime.Response.encode encode))];
+                (Ppx_deriving_router_runtime.Handle.encode encode))];
     [%stri
       let [%p pvar ~loc (handle_name td)] =
         [%e
