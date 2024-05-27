@@ -11,7 +11,7 @@
   /nested/api/121
   /User_info?user_id=username
   /user/username
-  /Signal?level=warning
+  /Signal?level=1
   # TESTING ROUTE MATCHING GENERATION
   ## GET /
   OK: HOME PAGE
@@ -35,8 +35,8 @@
   OK: User info for "username"
   ## GET /user/username_via_path
   OK: User info for "username_via_path"
-  ## GET /Signal?level=alert
-  OK: Signal: alert
+  ## GET /Signal?level=2
+  OK: Signal: 2
   # TESTING ROUTE MATCHING GENERATION (API)
   ## GET /
   OK: []
