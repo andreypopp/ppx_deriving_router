@@ -13,7 +13,7 @@
  (module_systems commonjs))
 
 (cram
- (deps ./js/browser/test/test.js))
+ (deps ./js/browser/test/test.js %{project_root}/native/test/test.exe))
 
 (copy_files#
  (files ../../native/test/routing.ml))

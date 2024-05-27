@@ -247,6 +247,76 @@ let routes_handler : Dream.handler =
 Note how we delegated request processing to corresponding handlers. We can also
 run certain middlewares for certain routes, if we wish to do so.
 
+## Deriving `to_url_query`/`of_url_query` through JSON representation
+
+It is possible to derive `to_url_query` and `of_url_query` through a JSON
+representation of a type by using `url_query_via_json` deriver:
+
+```ocaml
+type t = { a : int option } [@@deriving json, url_query_via_json]
+```
+
+This won't result in pretty URL params but useful to quickly get something
+passed through URL.
+
+## Deriving `to_url_query`/`of_url_query` through isomorphism
+
+It is possible to derive `to_url_query` and `of_url_query` through an
+isomorphism to/from other type by using `url_query_via_iso` deriver.
+
+Conside the following type first:
+
+```ocaml
+module User_id : sig
+  type t
+
+  val inject : string -> t
+  val project : t -> string
+end = struct
+  type t = string
+
+  let inject x = x
+  let project x = x
+end
+```
+
+Now we know that its underlying representation is a `string`, and we know how
+to convert it to/from a string. We can use `url_query_via_iso` deriver to
+derive `to_url_query` and `of_url_query` for the type, for that we need to
+define a type alias:
+
+```ocaml
+type user_id = User_id.t
+[@@deriving url_query_via_iso]
+```
+
+It's possible to customize which functions and which underlying type to use:
+
+```ocaml
+module Level = struct
+  type t = Alert | Warning
+
+  let to_int = function Alert -> 2 | Warning -> 1
+
+  let of_int = function
+    | 2 -> Alert
+    | 1 -> Warning
+    | _ -> failwith "invalid level"
+end
+
+type level = Level.t
+[@@deriving url_query_via_iso { t = int; inject = of_int; project = to_int }]
+```
+
+## Deriving `to_url_path`/`of_url_path` through isomorphism
+
+Similar to the above a `url_path_via_iso` deriver is available, an example:
+
+```ocaml
+type user_id = User_id.t
+[@@deriving url_path_via_iso]
+```
+
 ## Using with Melange
 
 `ppx_deriving_router` can be used with Melange, 

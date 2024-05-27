@@ -325,19 +325,6 @@ let extract td =
   in
   param, List.rev ctors
 
-let register ~derive () =
-  let derive_router ~ctxt (_rec_flag, type_decls) =
-    let loc = Expansion_context.Deriver.derived_item_loc ctxt in
-    match type_decls with
-    | [ td ] -> derive td
-    | [] -> assert false
-    | _ ->
-        Location.raise_errorf ~loc "expected exactly one type declaration"
-  in
-  let args = Deriving.Args.(empty) in
-  let str_type_decl = Deriving.Generator.V2.make args derive_router in
-  ignore (Deriving.add ~str_type_decl "router" : Deriving.t)
-
 let td_newtype td ret_ty =
   let loc = td.ptype_loc in
   let name = td.ptype_name.txt in
@@ -617,3 +604,159 @@ module Derive_witness = struct
       [%stri let [%p pvar ~loc name] = [%e e]];
     ]
 end
+
+module Derive_url_query_via_json = struct
+  let derive ~ctxt:_ td =
+    let loc = td.ptype_loc in
+    let name = td.ptype_name.txt in
+    let to_json = evar ~loc (mangle (Suffix "to_json") name) in
+    let of_json = evar ~loc (mangle (Suffix "of_json") name) in
+    let to_p = pvar ~loc (mangle (Suffix "to_url_query") name) in
+    let of_p = pvar ~loc (mangle (Suffix "of_url_query") name) in
+    [%str
+      let [%p to_p] =
+       fun k v ->
+        [ k, Ppx_deriving_json_runtime.to_string ([%e to_json] v) ]
+
+      let [%p of_p] =
+       fun k xs ->
+        match Stdlib.List.assoc_opt k xs with
+        | None -> Stdlib.Result.Error ("missing a query param: " ^ k)
+        | Some v -> (
+            let json = Ppx_deriving_json_runtime.of_string v in
+            try Stdlib.Result.Ok ([%e of_json] json)
+            with _ ->
+              Stdlib.Result.Error ("error parsing query param: " ^ k))]
+
+  let register () =
+    let derive ~ctxt (_rec_flag, tds) =
+      List.flat_map tds ~f:(derive ~ctxt)
+    in
+    let args = Deriving.Args.(empty) in
+    let str_type_decl = Deriving.Generator.V2.make args derive in
+    ignore (Deriving.add ~str_type_decl "url_query_via_json" : Deriving.t)
+end
+
+module Derive_url_query_via_iso = struct
+  let lid_evar ~loc lid = evar ~loc (Longident.name lid)
+
+  let assert_simple_lid ~default x =
+    Option.map
+      (fun { loc; txt } ->
+        match txt with
+        | Lident n -> n
+        | _ ->
+            Location.raise_errorf ~loc
+              "must be a simple identifier (not longident)")
+      x
+    |> Option.value ~default
+
+  let gen_iso ~loc td (via, inject, project) =
+    let base =
+      let loc = td.ptype_loc in
+      match td.ptype_kind, td.ptype_manifest with
+      | Ptype_abstract, Some { ptyp_desc = Ptyp_constr (lid, []); _ } ->
+          lid.txt
+      | _ ->
+          Location.raise_errorf ~loc
+            "should be a type alias with no parameters"
+    in
+    let via = Option.value via ~default:(Longident.parse "string") in
+    let inject = assert_simple_lid inject ~default:"inject" in
+    let inject =
+      let affix =
+        match inject with
+        | "of_string" -> Suffix inject
+        | "inject" -> Prefix inject
+        | _ -> Prefix inject
+      in
+      mangle_lid affix base
+    in
+    let inject = lid_evar ~loc inject in
+    let project = assert_simple_lid project ~default:"project" in
+    let project =
+      let affix =
+        match project with
+        | "to_string" -> Suffix project
+        | "project" -> Prefix project
+        | _ -> Prefix project
+      in
+      mangle_lid affix base
+    in
+    let project = lid_evar ~loc project in
+    via, inject, project
+
+  let derive ~ctxt:_ iso td =
+    let loc = td.ptype_loc in
+    let name = td.ptype_name.txt in
+    let via, inject, project = gen_iso ~loc td iso in
+    let to_ = lid_evar ~loc (mangle_lid (Suffix "to_url_query") via) in
+    let of_ = lid_evar ~loc (mangle_lid (Suffix "of_url_query") via) in
+    let to_p = pvar ~loc (mangle (Suffix "to_url_query") name) in
+    let of_p = pvar ~loc (mangle (Suffix "of_url_query") name) in
+    [%str
+      let [%p to_p] = fun k v -> [%e to_] k ([%e project] v)
+
+      let [%p of_p] =
+       fun k xs -> Stdlib.Result.map [%e inject] ([%e of_] k xs)]
+
+  let register () =
+    let derive ~ctxt (_rec_flag, tds) via inject project =
+      List.flat_map tds ~f:(derive ~ctxt (via, inject, project))
+    in
+    let args =
+      Deriving.Args.(
+        empty
+        +> arg "t" (pexp_ident __)
+        +> arg "inject" (pexp_ident __')
+        +> arg "project" (pexp_ident __'))
+    in
+    let str_type_decl = Deriving.Generator.V2.make args derive in
+    ignore (Deriving.add ~str_type_decl "url_query_via_iso" : Deriving.t)
+end
+
+module Derive_url_path_via_iso = struct
+  open Derive_url_query_via_iso
+
+  let derive ~ctxt:_ iso td =
+    let loc = td.ptype_loc in
+    let name = td.ptype_name.txt in
+    let via, inject, project = gen_iso ~loc td iso in
+    let to_ = lid_evar ~loc (mangle_lid (Suffix "to_url_path") via) in
+    let of_ = lid_evar ~loc (mangle_lid (Suffix "of_url_path") via) in
+    let to_p = pvar ~loc (mangle (Suffix "to_url_path") name) in
+    let of_p = pvar ~loc (mangle (Suffix "of_url_path") name) in
+    [%str
+      let [%p to_p] = fun v -> [%e to_] ([%e project] v)
+      let [%p of_p] = fun v -> Stdlib.Option.map [%e inject] ([%e of_] v)]
+
+  let register () =
+    let derive ~ctxt (_rec_flag, tds) via inject project =
+      List.flat_map tds ~f:(derive ~ctxt (via, inject, project))
+    in
+    let args =
+      Deriving.Args.(
+        empty
+        +> arg "t" (pexp_ident __)
+        +> arg "inject" (pexp_ident __')
+        +> arg "project" (pexp_ident __'))
+    in
+    let str_type_decl = Deriving.Generator.V2.make args derive in
+    ignore (Deriving.add ~str_type_decl "url_path_via_iso" : Deriving.t)
+end
+
+let register ~derive () =
+  let derive_router ~ctxt (_rec_flag, type_decls) =
+    let loc = Expansion_context.Deriver.derived_item_loc ctxt in
+    match type_decls with
+    | [ td ] -> derive td
+    | [] -> assert false
+    | _ ->
+        Location.raise_errorf ~loc "expected exactly one type declaration"
+  in
+  let args = Deriving.Args.(empty) in
+  let str_type_decl = Deriving.Generator.V2.make args derive_router in
+  Derive_url_query_via_json.register ();
+  Derive_url_query_via_iso.register ();
+  Derive_url_path_via_iso.register ();
+  ignore (Deriving.add ~str_type_decl "router" : Deriving.t)

@@ -15,13 +15,53 @@ let modifier_to_url_query k = function
   | Uppercase -> [ k, "uppercase" ]
   | Lowercase -> [ k, "lowercase" ]
 
+module Options = struct
+  open Ppx_deriving_json_runtime.Primitives
+
+  type t = { a : int option } [@@deriving json, url_query_via_json]
+end
+
+module User_id : sig
+  type t
+
+  val inject : string -> t
+  val project : t -> string
+end = struct
+  type t = string
+
+  let inject x = x
+  let project x = x
+end
+
+module Level = struct
+  type t = Alert | Warning
+
+  let to_int = function Alert -> 2 | Warning -> 1
+
+  let of_int = function
+    | 2 -> Alert
+    | 1 -> Warning
+    | _ -> failwith "invalid level"
+end
+
 module Pages = struct
   open Ppx_deriving_router_runtime.Primitives
+
+  type user_id = User_id.t
+  [@@deriving url_query_via_iso, url_path_via_iso]
+
+  type level = Level.t
+  [@@deriving
+    url_query_via_iso { t = int; inject = of_int; project = to_int }]
 
   type t =
     | Home [@GET "/"]
     | Hello of { name : string; modifier : modifier option }
         [@GET "/hello/:name"]
+    | Echo_options of { options : Options.t }
+    | User_info of { user_id : user_id }
+    | User_info_via_path of { user_id : user_id } [@GET "/user/:user_id"]
+    | Signal of { level : level }
     | Route_with_implicit_path of { param : string option }
     | Route_with_implicit_path_post [@POST]
   [@@deriving router]

@@ -9,6 +9,9 @@
   /121
   /hello/world
   /nested/api/121
+  /User_info?user_id=username
+  /user/username
+  /Signal?level=warning
   # TESTING ROUTE MATCHING GENERATION
   ## GET /
   OK: HOME PAGE
@@ -26,6 +29,14 @@
   Method Not Allowed: Method not allowed
   ## POST /Route_with_implicit_path_post
   OK: posted
+  ## GET /Echo_options?options={a:42}
+  OK: {"a":42}
+  ## GET /User_info?user_id=username
+  OK: User info for "username"
+  ## GET /user/username_via_path
+  OK: User info for "username_via_path"
+  ## GET /Signal?level=alert
+  OK: Signal: alert
   # TESTING ROUTE MATCHING GENERATION (API)
   ## GET /
   OK: []

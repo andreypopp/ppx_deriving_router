@@ -10,6 +10,18 @@ let pages_handle route _req =
       let param = Option.value ~default:"-" param in
       return (Dream.response ("works as well, param is: " ^ param))
   | Route_with_implicit_path_post -> return (Dream.response "posted")
+  | Echo_options { options } ->
+      let json = Options.to_json options in
+      let json = Yojson.Basic.to_string json in
+      Dream.json json >>= return
+  | User_info { user_id } | User_info_via_path { user_id } ->
+      return
+        (Dream.response
+           (Printf.sprintf "User info for %S" (User_id.project user_id)))
+  | Signal { level } ->
+      return
+        (Dream.response
+           (Printf.sprintf "Signal: %d" (Level.to_int level)))
   | Hello { name; modifier } ->
       let name =
         match modifier with
@@ -63,6 +75,12 @@ let test () =
   print_endline
     (All.href (Pages (Hello { name = "world"; modifier = None })));
   print_endline (All.href (Api (Get_user { id = 121 })));
+  print_endline
+    (Pages.href (User_info { user_id = User_id.inject "username" }));
+  print_endline
+    (Pages.href
+       (User_info_via_path { user_id = User_id.inject "username" }));
+  print_endline (Pages.href (Signal { level = Warning }));
   print_endline "# TESTING ROUTE MATCHING GENERATION";
   let test_req ?body h method_ target =
     print_endline
@@ -86,6 +104,10 @@ let test () =
   test_req pages_handler `POST "/Route_with_implicit_path?param=ok";
   test_req pages_handler `GET "/Route_with_implicit_path_post";
   test_req pages_handler `POST "/Route_with_implicit_path_post";
+  test_req pages_handler `GET "/Echo_options?options={a:42}";
+  test_req pages_handler `GET "/User_info?user_id=username";
+  test_req pages_handler `GET "/user/username_via_path";
+  test_req pages_handler `GET "/Signal?level=2";
   print_endline "# TESTING ROUTE MATCHING GENERATION (API)";
   test_req api_handler `GET "/";
   test_req api_handler `POST "/";
