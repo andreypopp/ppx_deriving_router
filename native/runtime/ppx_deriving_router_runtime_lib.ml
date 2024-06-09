@@ -1,5 +1,7 @@
 type http_method = [ `DELETE | `GET | `POST | `PUT ]
 
+module Witness = Ppx_deriving_router_witness
+
 module type REQUEST = sig
   type t
 
@@ -102,7 +104,8 @@ module Make
     with type Request.t = Request.t
      and type Response.t = Response.t
      and type Response.status = Response.status
-     and type 'a Return.t = 'a Return.t = struct
+     and type 'a Return.t = 'a Return.t
+     and module Witness = Witness = struct
   type json = Yojson.Basic.t
   type request = Request.t
   type response = Response.t
