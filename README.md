@@ -16,7 +16,7 @@ opam install ppx_deriving_router
 Add preprocessing configuration in `dune`:
 ```
 (...
- (preprocess (pps ppx_deriving_router))
+ (preprocess (pps ppx_deriving_router.dream))
  ...)
 ```
 

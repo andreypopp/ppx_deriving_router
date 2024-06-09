@@ -9,6 +9,7 @@ bug-reports: "https://github.com/andreypopp/ppx_deriving_router/issues"
 depends: [
   "ocaml" {>= "4.14"}
   "dune" {>= "3.11"}
+  "lwt"
   "ppxlib"
   "containers"
   "routes"
@@ -18,6 +19,7 @@ depends: [
   "uri"
   "odoc" {with-doc}
 ]
+depopts: ["dream"]
 build: [
   ["dune" "subst"] {dev}
   [
