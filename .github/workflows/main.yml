@@ -39,6 +39,9 @@ jobs:
         with:
           node-version: 21
 
+      # going to be required by dream but as it's a depopt only, set-up OCaml
+      # doesn't handle it
+      - run: sudo apt-get install -qq -yy libev-dev libssl-dev pkg-config
       # clean build
       - run: opam install . --deps-only
       - run: opam exec -- dune build -p ppx_deriving_router
