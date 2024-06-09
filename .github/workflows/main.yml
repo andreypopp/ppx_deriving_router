@@ -39,8 +39,13 @@ jobs:
         with:
           node-version: 21
 
-      - run: opam install . --deps-only --with-test
+      # clean build
+      - run: opam install . --deps-only
       - run: opam exec -- dune build -p ppx_deriving_router
+      # build with dream (should make ppx_deriving_router.dream available)
       - run: opam install dream --yes
+      - run: opam exec -- dune build -p ppx_deriving_router
+      # run tests
+      - run: opam install . --deps-only --with-test
       - run: opam exec -- dune build
       - run: opam exec -- dune runtest
