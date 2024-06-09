@@ -37,5 +37,6 @@
   dune
   routes
   dream
+  ppx_deriving_router
   ppx_deriving_json
   uri))

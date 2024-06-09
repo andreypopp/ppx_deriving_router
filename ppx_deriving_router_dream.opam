@@ -11,6 +11,7 @@ depends: [
   "dune" {>= "3.11"}
   "routes"
   "dream"
+  "ppx_deriving_router"
   "ppx_deriving_json"
   "uri"
   "odoc" {with-doc}
