@@ -1,27 +1,22 @@
 open Routing
 open Lwt.Infix
 
-let return = Ppx_deriving_router_runtime.Return.return
-
 let pages_handle route _req =
   match route with
-  | Pages.Home -> return (Dream.response "HOME PAGE")
+  | Pages.Home -> Dream.respond "HOME PAGE"
   | Route_with_implicit_path { param } ->
       let param = Option.value ~default:"-" param in
-      return (Dream.response ("works as well, param is: " ^ param))
-  | Route_with_implicit_path_post -> return (Dream.response "posted")
+      Dream.respond ("works as well, param is: " ^ param)
+  | Route_with_implicit_path_post -> Dream.respond "posted"
   | Echo_options { options } ->
       let json = Options.to_json options in
       let json = Yojson.Basic.to_string json in
-      Dream.json json >>= return
+      Dream.json json
   | User_info { user_id } | User_info_via_path { user_id } ->
-      return
-        (Dream.response
-           (Printf.sprintf "User info for %S" (User_id.project user_id)))
+      Dream.respond
+        (Printf.sprintf "User info for %S" (User_id.project user_id))
   | Signal { level } ->
-      return
-        (Dream.response
-           (Printf.sprintf "Signal: %d" (Level.to_int level)))
+      Dream.respond (Printf.sprintf "Signal: %d" (Level.to_int level))
   | Hello { name; modifier } ->
       let name =
         match modifier with
@@ -30,7 +25,7 @@ let pages_handle route _req =
         | Some Lowercase -> String.lowercase_ascii name
       in
       let greeting = Printf.sprintf "Hello, %s!" name in
-      return (Dream.response greeting)
+      Dream.respond greeting
 
 let pages_handler = Pages.handle pages_handle
 
@@ -40,10 +35,10 @@ let api_handle :
     =
  fun x _req ->
   match x with
-  | Raw_response -> return (Dream.response "RAW RESPONSE")
-  | List_users -> return []
-  | Create_user { id } -> return { Api.id }
-  | Get_user { id } -> return { Api.id }
+  | Raw_response -> Dream.respond "RAW RESPONSE"
+  | List_users -> Lwt.return []
+  | Create_user { id } -> Lwt.return { Api.id }
+  | Get_user { id } -> Lwt.return { Api.id }
 
 let api_handler : Dream.handler = Api.handle { f = api_handle }
 

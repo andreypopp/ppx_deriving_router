@@ -1,9 +1,3 @@
-type 'a v = {
-  data : 'a option;
-  headers : (string * string) list;
-  status : Dream.status option;
-}
-
 open struct
   module Request :
     Ppx_deriving_router_runtime_lib.REQUEST with type t = Dream.request =
@@ -43,28 +37,15 @@ open struct
   module Return :
     Ppx_deriving_router_runtime_lib.RETURN
       with type status = Dream.status
-       and type 'a t = 'a v = struct
+       and type 'a t = 'a = struct
     type status = Dream.status
 
-    type 'a t = 'a v = {
-      data : 'a option;
-      headers : (string * string) list;
-      status : status option;
-    }
+    type 'a t = 'a
 
-    let data x = x.data
-    let status x = x.status
-    let headers x = x.headers
+    let data x = Some x
+    let status _ = None
+    let headers _ = []
   end
 end
 
 include Ppx_deriving_router_runtime_lib.Make (Request) (Response) (Return)
-
-module Return = struct
-  include Return
-
-  type 'a t = 'a v
-
-  let return ?status ?(headers = []) data =
-    Lwt.return { data = Some data; headers; status }
-end

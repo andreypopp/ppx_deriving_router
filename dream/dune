@@ -1,0 +1,6 @@
+(library
+ (name ppx_deriving_router_dream)
+ (public_name ppx_deriving_router_dream)
+ (libraries ppx_deriving_router)
+ (ppx_runtime_libraries ppx_deriving_router_dream.runtime)
+ (kind ppx_deriver))

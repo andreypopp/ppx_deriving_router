@@ -1,0 +1,7 @@
+(executable
+ (name test)
+ (preprocess
+  (pps ppx_deriving_router_dream ppx_deriving_json.native)))
+
+(cram
+ (deps ./test.exe))
