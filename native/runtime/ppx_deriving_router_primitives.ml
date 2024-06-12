@@ -41,11 +41,11 @@ let int_of_url_query k xs =
         | None -> Error "not an integer value"
         | Some x -> Ok x))
 
-let bool_to_url_query k x = if x then [ k, "true" ] else []
+let bool_to_url_query k x = if x then [ k, "true" ] else [ k, "false" ]
 
 let bool_of_url_query k xs =
   last_wins k xs (function
-    | None -> Ok false
+    | None -> Error "missing value"
     | Some "true" -> Ok true
     | Some "false" -> Ok false
     | _ -> Error "not a boolean value (true, false)")
