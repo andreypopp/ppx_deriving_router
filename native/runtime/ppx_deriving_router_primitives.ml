@@ -28,7 +28,10 @@ let float_of_url_query k xs =
     | None -> Error "missing value"
     | Some x -> (
         match float_of_string_opt x with
-        | None -> Error "not a float value"
+        | None ->
+            Error
+              (Printf.sprintf
+                 "expected a float value, instead received: %s" x)
         | Some x -> Ok x))
 
 let int_to_url_query k x = [ k, string_of_int x ]
@@ -38,7 +41,10 @@ let int_of_url_query k xs =
     | None -> Error "missing value"
     | Some x -> (
         match int_of_string_opt x with
-        | None -> Error "not an integer value"
+        | None ->
+            Error
+              (Printf.sprintf
+                 "expected an integer value, instead received: %s" x)
         | Some x -> Ok x))
 
 let bool_to_url_query k x = if x then [ k, "true" ] else []
@@ -48,7 +54,12 @@ let bool_of_url_query k xs =
     | None -> Ok false
     | Some "true" -> Ok true
     | Some "false" -> Ok false
-    | _ -> Error "not a boolean value (true, false)")
+    | Some v ->
+        Error
+          (Printf.sprintf
+             "expected a boolean value (true, false), instead received: \
+              %s"
+             v))
 
 let option_to_url_query f k x =
   match x with None -> [] | Some v -> f k v
