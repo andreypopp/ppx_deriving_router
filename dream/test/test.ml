@@ -25,14 +25,15 @@ let pages_handle route _req =
         (Printf.sprintf "User info for %S" (User_id.project user_id))
   | Signal { level } ->
       Dream.respond (Printf.sprintf "Signal: %d" (Level.to_int level))
-  | Hello { name; modifier } ->
+  | Hello { name; modifier; greeting } ->
+      let greeting = Option.value greeting ~default:"Hello" in
       let name =
         match modifier with
         | None -> name
         | Some Uppercase -> String.uppercase_ascii name
         | Some Lowercase -> String.lowercase_ascii name
       in
-      let greeting = Printf.sprintf "Hello, %s!" name in
+      let greeting = Printf.sprintf "%s, %s!" greeting name in
       Dream.respond greeting
 
 let pages_handler = Pages.handle pages_handle
@@ -71,12 +72,17 @@ let test () =
   print_endline (Pages.href (Route_with_implicit_path { param = None }));
   print_endline
     (Pages.href (Route_with_implicit_path { param = Some "ok" }));
-  print_endline (Pages.href (Hello { name = "world"; modifier = None }));
   print_endline
-    (Pages.href (Hello { name = "world"; modifier = Some Uppercase }));
+    (Pages.href
+       (Hello { name = "world"; modifier = None; greeting = None }));
+  print_endline
+    (Pages.href
+       (Hello
+          { name = "world"; modifier = Some Uppercase; greeting = None }));
   print_endline (Api.href (Get_user { id = 121 }));
   print_endline
-    (All.href (Pages (Hello { name = "world"; modifier = None })));
+    (All.href
+       (Pages (Hello { name = "world"; modifier = None; greeting = None })));
   print_endline (All.href (Api (Get_user { id = 121 })));
   print_endline
     (Pages.href (User_info { user_id = User_id.inject "username" }));
@@ -128,7 +134,9 @@ let test () =
   print_endline "# TESTING ROUTE MATCHING GENERATION (ALL)";
   test_req all_handler `GET "/hello/world";
   test_req all_handler `GET "/";
-  test_req all_handler `GET "/nested/api/121"
+  test_req all_handler `GET "/nested/api/121";
+  test_req pages_handler `GET
+    "/hello/pct%20encoded?greeting=pct%20encoded"
 
 let () =
   match Sys.argv.(1) with

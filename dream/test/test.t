@@ -63,3 +63,5 @@
   OK: HOME PAGE
   ## GET /nested/api/121
   OK: {"id":121}
+  ## GET /hello/pct%20encoded?greeting=pct%20encoded
+  OK: pct encoded, pct encoded!

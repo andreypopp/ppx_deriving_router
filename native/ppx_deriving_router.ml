@@ -146,7 +146,23 @@ let derive_path td (exemplar, ctors) =
           let f = function
             | Pparam (name, ty) ->
                 let to_url = derive_conv "to_url_path" ty in
+                let to_url =
+                  [%expr
+                    fun x ->
+                      let x = [%e to_url] x in
+                      let buf = Buffer.create (String.length x) in
+                      Ppx_deriving_router_runtime.Encode.encode_path buf x;
+                      Buffer.contents buf]
+                in
                 let of_url = derive_conv "of_url_path" ty in
+                let of_url =
+                  [%expr
+                    fun x ->
+                      let x =
+                        Ppx_deriving_router_runtime.Decode.decode_path x
+                      in
+                      [%e of_url] x]
+                in
                 [%expr
                   Routes.pattern [%e to_url] [%e of_url]
                     [%e estring ~loc name]]

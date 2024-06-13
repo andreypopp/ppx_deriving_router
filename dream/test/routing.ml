@@ -56,8 +56,11 @@ module Pages = struct
 
   type t =
     | Home [@GET "/"]
-    | Hello of { name : string; modifier : modifier option }
-        [@GET "/hello/:name"]
+    | Hello of {
+        name : string;
+        modifier : modifier option;
+        greeting : string option;
+      } [@GET "/hello/:name"]
     | Echo_options of { options : Options.t }
     | List_users of { user_ids : user_id list }
     | User_info of { user_id : user_id }

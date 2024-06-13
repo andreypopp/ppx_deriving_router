@@ -11,9 +11,13 @@ let test () =
   print_endline (Pages.href (Route_with_implicit_path { param = None }));
   print_endline
     (Pages.href (Route_with_implicit_path { param = Some "ok" }));
-  print_endline (Pages.href (Hello { name = "world"; modifier = None }));
   print_endline
-    (Pages.href (Hello { name = "world"; modifier = Some Uppercase }))
+    (Pages.href
+       (Hello { name = "world"; modifier = None; greeting = None }));
+  print_endline
+    (Pages.href
+       (Hello
+          { name = "world"; modifier = Some Uppercase; greeting = None }))
 
 let fetch_and_log (req : _ All.t) =
   ignore
@@ -38,7 +42,13 @@ let () =
   | "test" -> test ()
   | "hello" ->
       fetch_and_log_response
-        (Pages (Hello { name = "world"; modifier = Some Uppercase }))
+        (Pages
+           (Hello
+              {
+                name = "world";
+                modifier = Some Uppercase;
+                greeting = None;
+              }))
   | "get_user" -> fetch_and_log (Api (Get_user { id = 121 }))
   | "create_user" -> fetch_and_log (Api (Create_user { id = 42 }))
   | "raw" -> fetch_and_log (Api Raw_response)

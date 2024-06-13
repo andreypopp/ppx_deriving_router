@@ -6,9 +6,16 @@ module type REQUEST = sig
   type t
 
   val path : t -> string
+  (* request path component *)
+
   val queries : t -> (string * string) list
+  (* request queries component, url decoded *)
+
   val body : t -> string Lwt.t
+  (* request body *)
+
   val method_ : t -> http_method
+  (* request method *)
 end
 
 module type RESPONSE = sig
