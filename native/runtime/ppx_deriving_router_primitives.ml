@@ -72,9 +72,7 @@ let option_of_url_query f k xs =
         | Ok v -> Ok (Some v)
         | Error err -> Error err))
 
-let list_to_url_query f k xs =
-  List.fold_left (fun acc x -> List.rev_append (f k x) acc) [] xs
-  |> List.rev
+let list_to_url_query f k xs = List.concat_map (f k) xs
 
 let list_of_url_query f k xs =
   let rec loop acc k xs f =
