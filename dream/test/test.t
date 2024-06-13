@@ -12,6 +12,8 @@
   /User_info?user_id=username
   /user/username
   /Signal?level=1
+  /List_users?user_ids=u1&user_ids=u2
+  /List_users
   # TESTING ROUTE MATCHING GENERATION
   ## GET /
   OK: HOME PAGE
@@ -37,6 +39,10 @@
   OK: User info for "username_via_path"
   ## GET /Signal?level=2
   OK: Signal: 2
+  ## GET /List_users?user_ids=u1&user_ids=u2
+  OK: User ids = [u1, u2]
+  ## GET /List_users
+  OK: User ids = []
   # TESTING ROUTE MATCHING GENERATION (API)
   ## GET /
   OK: []

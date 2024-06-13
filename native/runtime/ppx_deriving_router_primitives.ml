@@ -71,3 +71,19 @@ let option_of_url_query f k xs =
         match f k [ k, v ] with
         | Ok v -> Ok (Some v)
         | Error err -> Error err))
+
+let list_to_url_query f k xs =
+  List.fold_left (fun acc x -> List.rev_append (f k x) acc) [] xs
+  |> List.rev
+
+let list_of_url_query f k xs =
+  let rec loop acc k xs f =
+    match xs with
+    | (k', x) :: xs when String.equal k k' -> (
+        match f k [ k, x ] with
+        | Error _ as e -> e
+        | Ok r -> loop (r :: acc) k xs f)
+    | _ :: xs -> loop acc k xs f
+    | [] -> Ok (List.rev acc)
+  in
+  loop [] k xs f
