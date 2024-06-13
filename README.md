@@ -73,20 +73,19 @@ val handle : (t -> Dream.request -> Dream.response Lwt.t) -> Dream.handler
 
 is generated for each route type. Such function can be used to define a `Dream.handler`:
 ```ocaml
-let return = Ppx_deriving_router_runtime.Return.return
-
-let pages_handle = Pages.handle (fun route _req ->
-  match route with
-  | Home -> return (Dream.response "Home page!")
-  | About -> return (Dream.response "About page!")
-  | Hello {name; repeat} ->
-    let name =
-      match repeat with
-      | Some repeat ->
-        List.init repeat (fun _ -> name) |> String.concat ", "
-      | None -> name
-    in
-    return (Dream.response (Printf.sprintf "Hello, %s" name)))
+let pages_handle =
+  Pages.handle (fun route _req ->
+      match route with
+      | Home -> Dream.respond "Home page!"
+      | About -> Dream.respond "About page!"
+      | Hello { name; repeat } ->
+          let name =
+            match repeat with
+            | Some repeat ->
+                List.init repeat (fun _ -> name) |> String.concat ", "
+            | None -> name
+          in
+          Dream.respond (Printf.sprintf "Hello, %s" name))
 ```
 
 ## Using the handler in a Dream app
