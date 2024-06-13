@@ -59,6 +59,7 @@ module Pages = struct
     | Hello of { name : string; modifier : modifier option }
         [@GET "/hello/:name"]
     | Echo_options of { options : Options.t }
+    | List_users of { user_ids : user_id list }
     | User_info of { user_id : user_id }
     | User_info_via_path of { user_id : user_id } [@GET "/user/:user_id"]
     | Signal of { level : level }

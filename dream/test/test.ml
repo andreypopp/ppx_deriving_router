@@ -12,6 +12,14 @@ let pages_handle route _req =
       let json = Options.to_json options in
       let json = Yojson.Basic.to_string json in
       Dream.json json
+  | List_users { user_ids } ->
+      let ids =
+        match user_ids with
+        | user_ids ->
+            Printf.sprintf "[%s]"
+              (user_ids |> List.map User_id.project |> String.concat ", ")
+      in
+      Dream.respond (Printf.sprintf "User ids = %s" ids)
   | User_info { user_id } | User_info_via_path { user_id } ->
       Dream.respond
         (Printf.sprintf "User info for %S" (User_id.project user_id))
@@ -76,6 +84,11 @@ let test () =
     (Pages.href
        (User_info_via_path { user_id = User_id.inject "username" }));
   print_endline (Pages.href (Signal { level = Warning }));
+  print_endline
+    (Pages.href
+       (List_users
+          { user_ids = [ User_id.inject "u1"; User_id.inject "u2" ] }));
+  print_endline (Pages.href (List_users { user_ids = [] }));
   print_endline "# TESTING ROUTE MATCHING GENERATION";
   let test_req ?body h method_ target =
     print_endline
@@ -103,6 +116,8 @@ let test () =
   test_req pages_handler `GET "/User_info?user_id=username";
   test_req pages_handler `GET "/user/username_via_path";
   test_req pages_handler `GET "/Signal?level=2";
+  test_req pages_handler `GET "/List_users?user_ids=u1&user_ids=u2";
+  test_req pages_handler `GET "/List_users";
   print_endline "# TESTING ROUTE MATCHING GENERATION (API)";
   test_req api_handler `GET "/";
   test_req api_handler `POST "/";
