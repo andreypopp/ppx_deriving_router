@@ -386,7 +386,10 @@ module Derive_href = struct
                   [%e acc]]
               in
               let body = f body q in
-              List.fold_left qs ~init:body ~f
+              let body = List.fold_left qs ~init:body ~f in
+              [%expr
+                let [%p psep] = ref '?' in
+                [%e body]]
         in
         let body =
           List.fold_left (List.rev path) ~init:body ~f:(fun acc param ->
@@ -409,7 +412,6 @@ module Derive_href = struct
         let body =
           [%expr
             let [%p pout] = Buffer.create 16 in
-            let [%p psep] = ref '?' in
             [%e body]]
         in
         let bnds =
