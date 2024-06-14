@@ -164,23 +164,21 @@ module Api = struct
     | List_users : user list t [@GET "/"]
     | Create_user : user t [@POST "/"]
     | Get_user : { id : int } -> user t [@GET "/:id"]
-    | Raw : Dream.response t [@GET "/raw"]
+    | Raw : Ppx_deriving_router_runtime.response t [@GET "/raw"]
   [@@deriving router]
 end
 ```
 
 Then handler can be defined as follows:
 ```ocaml
-let return = Ppx_deriving_router_runtime.Return.return
-
 let api_handle : Dream.handler =
   let f : type a. a Api.t -> Dream.request -> a Lwt.t =
    fun x _req ->
     match x with
-    | List_users -> return []
-    | Create_user -> return { Api.id = 42 }
-    | Get_user { id } -> return { Api.id }
-    | Raw -> return (Dream.response "RAW")
+    | List_users -> Lwt.return []
+    | Create_user -> Lwt.return { Api.id = 42 }
+    | Get_user { id } -> Lwt.return { Api.id }
+    | Raw -> Dream.respond "RAW"
   in
   Api.handle { f }
 ```
@@ -199,6 +197,7 @@ It is possible to designate a route parameter to be a request body, in this
 case, its value is decoded from the request body as JSON. The JSON decoder is
 generated automatically for the route parameter type:
 ```ocaml
+open Ppx_deriving_json_runtime.Primitives
 type user_spec = { name : string } [@@deriving json]
 type _ api =
 | Create_user : {spec: user_spec; [@body]} -> int t [@POST]
