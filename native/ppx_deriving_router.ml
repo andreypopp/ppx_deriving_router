@@ -142,7 +142,7 @@ let derive_path td (exemplar, ctors) =
     match exemplar.l_path with
     | [] -> [%expr Routes.nil]
     | init :: params ->
-        let body =
+        let has_wildcard, body =
           let f = function
             | Pparam (name, ty) ->
                 let to_url = derive_conv "to_url_path" ty in
@@ -163,21 +163,28 @@ let derive_path td (exemplar, ctors) =
                       in
                       [%e of_url] x]
                 in
-                [%expr
-                  Routes.pattern [%e to_url] [%e of_url]
-                    [%e estring ~loc name]]
-            | Ppath path -> [%expr Routes.s [%e estring ~loc path]]
+                ( false,
+                  [%expr
+                    Routes.pattern [%e to_url] [%e of_url]
+                      [%e estring ~loc name]] )
+            | Pwildcard _ -> true, [%expr Routes.wildcard]
+            | Ppath path -> false, [%expr Routes.s [%e estring ~loc path]]
           in
-          List.fold_left params ~init:(f init) ~f:(fun body param ->
-              let param = f param in
-              [%expr Routes.( / ) [%e body] [%e param]])
+          List.fold_left params ~init:(f init) ~f:(fun (_, body) param ->
+              let has_wildcard, eparam = f param in
+              let op =
+                if has_wildcard then [%expr Routes.( /? )]
+                else [%expr Routes.( / )]
+              in
+              has_wildcard, [%expr [%e op] [%e body] [%e eparam]])
         in
-        [%expr Routes.( /? ) [%e body] Routes.nil]
+        if has_wildcard then body
+        else [%expr Routes.( /? ) [%e body] Routes.nil]
   in
   let make =
     let params =
       List.filter exemplar.l_path ~f:(function
-        | Pparam _ -> true
+        | Pparam _ | Pwildcard _ -> true
         | Ppath _ -> false)
       |> List.mapi ~f:(fun idx _ -> Printf.sprintf "_param%d" idx)
     in
@@ -199,12 +206,18 @@ let derive_path td (exemplar, ctors) =
           let lname = { loc; txt = Lident name } in
           let path_params =
             List.filter_map leaf.l_path ~f:(function
-              | Pparam (name, _) -> Some name
+              | Pparam (name, _) -> Some (`param name)
+              | Pwildcard name -> Some (`wildcard name)
               | Ppath _ -> None)
           in
           let args =
             List.map2 path_params params ~f:(fun name value ->
-                { loc; txt = Lident name }, evar ~loc value)
+                let v = evar ~loc value in
+                match name with
+                | `param name -> { loc; txt = Lident name }, v
+                | `wildcard name ->
+                    ( { loc; txt = Lident name },
+                      [%expr Routes.Parts.wildcard_match [%e v]] ))
           in
           let args =
             args

@@ -39,7 +39,6 @@ open struct
       with type status = Dream.status
        and type 'a t = 'a = struct
     type status = Dream.status
-
     type 'a t = 'a
 
     let data x = Some x

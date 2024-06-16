@@ -204,6 +204,16 @@ type _ api =
 [@@deriving router]
 ```
 
+## Wildcard path patterns
+
+It is possible to capture the remaining part of the path as a parameter when
+the `...name` path pattern is in the last position:
+```ocaml
+type t =
+| Static : {path : string} -> t [@GET "/static/...path"]
+[@@deriving router]
+```
+
 ## Route composition
 
 It is possible to compose routes by embedding other routes as arguments to

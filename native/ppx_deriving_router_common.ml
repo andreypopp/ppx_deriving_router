@@ -14,9 +14,18 @@ let method_to_string : method_ -> string = function
   | `PUT -> "PUT"
   | `DELETE -> "DELETE"
 
-let collect_params_rev ~loc:_ uri =
+let collect_params_rev ~loc uri =
   let rec aux acc = function
     | [] -> acc
+    | x :: xs when String.prefix x ~pre:"..." ->
+        if not (List.is_empty xs) then
+          Location.raise_errorf ~loc
+            "wildcard pattern can only be at the end of the path";
+        let x =
+          String.chop_prefix ~pre:"..." x
+          |> Option.get_exn_or "impossible"
+        in
+        `wildcard x :: acc
     | "" :: xs -> aux acc xs
     | x :: xs -> (
         match String.chop_prefix x ~pre:":" with
@@ -35,7 +44,11 @@ type leaf = {
 }
 
 and path = path_segment list
-and path_segment = Ppath of string | Pparam of string * core_type
+
+and path_segment =
+  | Ppath of string
+  | Pparam of string * core_type
+  | Pwildcard of string
 
 type route = Leaf of leaf | Mount of mount
 
@@ -67,7 +80,9 @@ let hash_route_by_path : leaf Hash.t =
  fun leaf ->
   Hash.list
     (function
-      | Pparam _ -> 0 | Ppath x -> Hash.combine2 1 (Hash.string x))
+      | Pparam _ -> 0
+      | Pwildcard _ -> 1
+      | Ppath x -> Hash.combine2 2 (Hash.string x))
     leaf.l_path
 
 let declare_router_attr method_ =
@@ -286,13 +301,14 @@ let extract td =
             let l_path =
               List.map path ~f:(function
                 | `path x -> Ppath x
+                | `wildcard x -> Pwildcard x
                 | `param x -> Pparam (x, resolve_type x))
             in
             let l_query =
               List.filter_map lds ~f:(fun ld ->
                   let is_path_param =
                     List.exists l_path ~f:(function
-                      | Pparam (name, _) ->
+                      | Pparam (name, _) | Pwildcard name ->
                           String.equal name ld.pld_name.txt
                       | Ppath _ -> false)
                   in
@@ -400,6 +416,10 @@ module Derive_href = struct
                     Ppx_deriving_router_runtime.Encode.encode_path
                       [%e out] [%e estring ~loc x];
                     [%e acc]]
+              | Pwildcard x ->
+                  [%expr
+                    Buffer.add_string [%e out] [%e evar ~loc x];
+                    [%e acc]]
               | Pparam (x, typ) ->
                   let to_url = derive_conv "to_url_path" typ in
                   [%expr
@@ -423,7 +443,7 @@ module Derive_href = struct
           List.filter_map path ~f:(fun param ->
               match param with
               | Ppath _ -> None
-              | Pparam (name, _typ) -> Some (make name))
+              | Pparam (name, _) | Pwildcard name -> Some (make name))
           @ List.map query ~f:(fun (name, _typ) -> make name)
         in
         match bnds with

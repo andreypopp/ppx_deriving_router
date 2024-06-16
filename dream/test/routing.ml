@@ -91,5 +91,7 @@ module All = struct
     | Pages : Pages.t -> Ppx_deriving_router_runtime.response t
         [@prefix "/"]
     | Api : 'a Api.t -> 'a t [@prefix "/nested/api"]
+    | Static : { path : string } -> Ppx_deriving_router_runtime.response t
+        [@GET "/static/...path"]
   [@@deriving router]
 end

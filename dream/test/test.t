@@ -14,6 +14,7 @@
   /Signal?level=1
   /List_users?user_ids=u1&user_ids=u2
   /List_users
+  /static/js/main.js
   # TESTING ROUTE MATCHING GENERATION
   ## GET /
   OK: HOME PAGE
@@ -65,3 +66,5 @@
   OK: {"id":121}
   ## GET /hello/pct%20encoded?greeting=pct%20encoded
   OK: pct encoded, pct encoded!
+  ## GET /static/js/main.js
+  OK: path="/js/main.js"

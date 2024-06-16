@@ -61,6 +61,7 @@ let all_handler : Dream.handler =
     match x with
     | Pages p -> pages_handle p req
     | Api e -> api_handle e req
+    | Static { path } -> Dream.respond (Printf.sprintf "path=%S" path)
   in
   All.handle { f }
 
@@ -95,6 +96,7 @@ let test () =
        (List_users
           { user_ids = [ User_id.inject "u1"; User_id.inject "u2" ] }));
   print_endline (Pages.href (List_users { user_ids = [] }));
+  print_endline (All.href (Static { path = "/js/main.js" }));
   print_endline "# TESTING ROUTE MATCHING GENERATION";
   let test_req ?body h method_ target =
     print_endline
@@ -136,7 +138,8 @@ let test () =
   test_req all_handler `GET "/";
   test_req all_handler `GET "/nested/api/121";
   test_req pages_handler `GET
-    "/hello/pct%20encoded?greeting=pct%20encoded"
+    "/hello/pct%20encoded?greeting=pct%20encoded";
+  test_req all_handler `GET "/static/js/main.js"
 
 let () =
   match Sys.argv.(1) with
