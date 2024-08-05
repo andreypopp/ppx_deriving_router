@@ -34,6 +34,11 @@ let collect_params_rev ~loc uri =
   in
   aux [] (Uri.path uri |> String.split_on_char ~by:'/')
 
+type path = path_segment list
+
+and path_segment =
+  [ `path of string | `param of string * core_type | `wildcard of string ]
+
 type leaf = {
   l_ctor : constructor_declaration;
   l_method_ : method_;
@@ -43,16 +48,7 @@ type leaf = {
   l_response : [ `response | `json_response of core_type ];
 }
 
-and path = path_segment list
-
-and path_segment =
-  | Ppath of string
-  | Pparam of string * core_type
-  | Pwildcard of string
-
-type route = Leaf of leaf | Mount of mount
-
-and mount = {
+type mount = {
   m_prefix : string list;
   m_typ : longident loc;
   m_typ_param : label option;
@@ -60,11 +56,13 @@ and mount = {
   m_response : [ `response | `passthrough ];
 }
 
+type route = Leaf of leaf | Mount of mount
+
 let equal_path : path Equal.t =
   let eq_param a b =
     match a, b with
-    | Ppath a, Ppath b -> String.equal a b
-    | Pparam _, Pparam _ -> true
+    | `path a, `path b -> String.equal a b
+    | `param _, `param _ -> true
     | _ -> false
   in
   Equal.list eq_param
@@ -80,9 +78,9 @@ let hash_route_by_path : leaf Hash.t =
  fun leaf ->
   Hash.list
     (function
-      | Pparam _ -> 0
-      | Pwildcard _ -> 1
-      | Ppath x -> Hash.combine2 2 (Hash.string x))
+      | `param _ -> 0
+      | `wildcard _ -> 1
+      | `path x -> Hash.combine2 2 (Hash.string x))
     leaf.l_path
 
 let declare_router_attr method_ =
@@ -300,17 +298,17 @@ let extract td =
             let path = List.rev (collect_params_rev ~loc uri) in
             let l_path =
               List.map path ~f:(function
-                | `path x -> Ppath x
-                | `wildcard x -> Pwildcard x
-                | `param x -> Pparam (x, resolve_type x))
+                | `path x -> `path x
+                | `wildcard x -> `wildcard x
+                | `param x -> `param (x, resolve_type x))
             in
             let l_query =
               List.filter_map lds ~f:(fun ld ->
                   let is_path_param =
                     List.exists l_path ~f:(function
-                      | Pparam (name, _) | Pwildcard name ->
+                      | `param (name, _) | `wildcard name ->
                           String.equal name ld.pld_name.txt
-                      | Ppath _ -> false)
+                      | `path _ -> false)
                   in
                   if is_path_param then None
                   else Some (ld.pld_name.txt, ld.pld_type))
@@ -410,17 +408,17 @@ module Derive_href = struct
         let body =
           List.fold_left (List.rev path) ~init:body ~f:(fun acc param ->
               match param with
-              | Ppath x ->
+              | `path x ->
                   [%expr
                     Buffer.add_char [%e out] '/';
                     Ppx_deriving_router_runtime.Encode.encode_path
                       [%e out] [%e estring ~loc x];
                     [%e acc]]
-              | Pwildcard x ->
+              | `wildcard x ->
                   [%expr
                     Buffer.add_string [%e out] [%e evar ~loc x];
                     [%e acc]]
-              | Pparam (x, typ) ->
+              | `param (x, typ) ->
                   let to_url = derive_conv "to_url_path" typ in
                   [%expr
                     Buffer.add_char [%e out] '/';
@@ -442,8 +440,8 @@ module Derive_href = struct
           in
           List.filter_map path ~f:(fun param ->
               match param with
-              | Ppath _ -> None
-              | Pparam (name, _) | Pwildcard name -> Some (make name))
+              | `path _ -> None
+              | `param (name, _) | `wildcard name -> Some (make name))
           @ List.map query ~f:(fun (name, _typ) -> make name)
         in
         match bnds with

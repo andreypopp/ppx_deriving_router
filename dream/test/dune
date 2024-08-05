@@ -4,4 +4,4 @@
   (pps ppx_deriving_router.dream ppx_deriving_json.native)))
 
 (cram
- (deps ./test.exe))
+ (deps ./test.exe (package ppx_deriving_router)))
