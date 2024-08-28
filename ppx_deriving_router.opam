@@ -36,3 +36,7 @@ build: [
   ]
 ]
 dev-repo: "git+https://github.com/andreypopp/ppx_deriving_router.git"
+pin-depends: [
+  ["melange-json.dev" "git+https://github.com/melange-community/melange-json"]
+  ["melange-json-native.dev" "git+https://github.com/melange-community/melange-json"]
+]

@@ -1,0 +1,4 @@
+pin-depends: [
+  ["melange-json.dev" "git+https://github.com/melange-community/melange-json"]
+  ["melange-json-native.dev" "git+https://github.com/melange-community/melange-json"]
+]
