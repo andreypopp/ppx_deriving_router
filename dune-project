@@ -28,4 +28,5 @@
   melange
   melange-fetch
   melange-json
+  melange-json-native
   uri))
