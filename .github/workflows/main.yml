@@ -43,6 +43,8 @@ jobs:
       # doesn't handle it
       - run: sudo apt-get install -qq -yy libev-dev libssl-dev pkg-config
       # clean build
+      - run: opam pin add melange-json.dev git@github.com:melange-community/melange-json.git --yes
+      - run: opam pin add melange-json-native.dev git@github.com:melange-community/melange-json.git --yes
       - run: opam install . --deps-only
       - run: opam exec -- dune build -p ppx_deriving_router
       # build with dream (should make ppx_deriving_router.dream available)
