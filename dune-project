@@ -27,5 +27,5 @@
   routes
   melange
   melange-fetch
-  ppx_deriving_json
+  melange-json
   uri))

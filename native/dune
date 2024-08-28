@@ -3,7 +3,7 @@
  (modules :standard \ ppx_deriving_router_test)
  (wrapped false)
  (public_name ppx_deriving_router)
- (libraries uri ppxlib containers ppx_deriving_json.native)
+ (libraries uri ppxlib containers melange-json-native.ppx)
  (kind ppx_deriver)
  (preprocess
   (pps ppxlib.metaquot)))

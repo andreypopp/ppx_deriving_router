@@ -7,4 +7,4 @@
  (libraries
   dream
   ppx_deriving_router.runtime_lib
-  ppx_deriving_json.native_runtime))
+  melange-json-native.ppx-runtime))
