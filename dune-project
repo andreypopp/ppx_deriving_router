@@ -1,5 +1,7 @@
 (lang dune 3.11)
 
+(name ppx_deriving_router)
+
 (using melange 0.1)
 
 (generate_opam_files true)
