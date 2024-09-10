@@ -2,7 +2,18 @@ type http_method = [ `DELETE | `GET | `POST | `PUT ]
 
 module Witness = Ppx_deriving_router_witness
 
+module type IO = sig
+  type 'a t
+
+  val return : 'a -> 'a t
+  val fail : exn -> 'a t
+  val bind : 'a t -> ('a -> 'b t) -> 'b t
+  val catch : (unit -> 'a t) -> ('a, exn) result t
+end
+
 module type REQUEST = sig
+  module IO : IO
+
   type t
 
   val path : t -> string
@@ -11,7 +22,7 @@ module type REQUEST = sig
   val queries : t -> (string * string) list
   (* request queries component, url decoded *)
 
-  val body : t -> string Lwt.t
+  val body : t -> string IO.t
   (* request body *)
 
   val method_ : t -> http_method
@@ -19,6 +30,8 @@ module type REQUEST = sig
 end
 
 module type RESPONSE = sig
+  module IO : IO
+
   type status
 
   val status_ok : status
@@ -29,7 +42,7 @@ module type RESPONSE = sig
   type t
 
   val respond :
-    status:status -> headers:(string * string) list -> string -> t Lwt.t
+    status:status -> headers:(string * string) list -> string -> t IO.t
 end
 
 module type RETURN = sig
@@ -42,13 +55,15 @@ module type RETURN = sig
 end
 
 module type S = sig
+  module IO : IO
+
   type json = Yojson.Basic.t
 
-  module Request : REQUEST
+  module Request : REQUEST with module IO = IO
 
   type request = Request.t
 
-  module Response : RESPONSE
+  module Response : RESPONSE with module IO = IO
 
   type response = Response.t
 
@@ -70,7 +85,7 @@ module type S = sig
       | Encode_raw : response encode
       | Encode_json : ('a -> json) -> 'a encode
 
-    val encode : 'a encode -> 'a return -> response Lwt.t
+    val encode : 'a encode -> 'a return -> response IO.t
 
     type 'v route =
       | Route : ('a, 'v) Routes.path * 'a * ('v -> 'w) -> 'w route
@@ -82,13 +97,13 @@ module type S = sig
 
     type 'a router
 
-    val make : (request -> 'a Lwt.t) Routes.router -> 'a router
+    val make : (request -> 'a IO.t) Routes.router -> 'a router
 
     val handle :
       'a router ->
-      ('a -> request -> response Lwt.t) ->
+      ('a -> request -> response IO.t) ->
       request ->
-      response Lwt.t
+      response IO.t
     (** handle request given a router and a dispatcher *)
 
     val dispatch :
@@ -99,25 +114,28 @@ module type S = sig
       | `Method_not_allowed
       | `Not_found
       | `Ok of 'a ]
-      Lwt.t
+      IO.t
   end
 end
 
 module Make
     (Request : REQUEST)
-    (Response : RESPONSE)
+    (Response : RESPONSE with module IO = Request.IO)
     (Return : RETURN with type status = Response.status) :
   S
     with type Request.t = Request.t
      and type Response.t = Response.t
      and type Response.status = Response.status
      and type 'a Return.t = 'a Return.t
+     and type 'a IO.t = 'a Request.IO.t
+     and type 'a IO.t = 'a Response.IO.t
      and module Witness = Witness = struct
   type json = Yojson.Basic.t
   type request = Request.t
   type response = Response.t
   type 'a return = 'a Return.t
 
+  module IO = Request.IO
   module Request = Request
   module Response = Response
   module Return = Return
@@ -135,7 +153,7 @@ module Make
       | Encode_raw : response encode
       | Encode_json : ('a -> json) -> 'a encode
 
-    let encode : type a. a encode -> a Return.t -> response Lwt.t =
+    let encode : type a. a encode -> a Return.t -> response IO.t =
      fun enc x ->
       let status =
         Option.value ~default:Response.status_ok (Return.status x)
@@ -145,7 +163,7 @@ module Make
       | Encode_raw, x -> (
           match Return.data x with
           | None -> Response.respond ~status ~headers ""
-          | Some x -> Lwt.return x)
+          | Some x -> IO.return x)
       | Encode_json to_json, x -> (
           match Return.data x with
           | None -> Response.respond ~status ~headers ""
@@ -169,7 +187,7 @@ module Make
 
     let to_route (Route (path, a, f)) = Routes.(map f (route path a))
 
-    type 'a router = (Request.t -> 'a Lwt.t) Routes.router
+    type 'a router = (Request.t -> 'a IO.t) Routes.router
 
     let make x = x
 
@@ -177,20 +195,20 @@ module Make
       let target = Request.path req in
       match Routes.match' router ~target with
       | Routes.FullMatch v | Routes.MatchWithTrailingSlash v ->
-          Lwt.bind
-            (Lwt_result.catch (fun () -> v req))
+          IO.bind
+            (IO.catch (fun () -> v req))
             (function
-              | Ok v -> Lwt.return (`Ok v)
+              | Ok v -> IO.return (`Ok v)
               | Error (Invalid_query_parameter (x, y)) ->
-                  Lwt.return (`Invalid_query_parameter (x, y))
+                  IO.return (`Invalid_query_parameter (x, y))
               | Error (Invalid_body reason) ->
-                  Lwt.return (`Invalid_body reason)
-              | Error Method_not_allowed -> Lwt.return `Method_not_allowed
-              | Error exn -> Lwt.fail exn)
-      | Routes.NoMatch -> Lwt.return `Not_found
+                  IO.return (`Invalid_body reason)
+              | Error Method_not_allowed -> IO.return `Method_not_allowed
+              | Error exn -> IO.fail exn)
+      | Routes.NoMatch -> IO.return `Not_found
 
     let handle (router : _ router) f req =
-      Lwt.bind (dispatch router req) (function
+      IO.bind (dispatch router req) (function
         | `Ok v -> f v req
         | `Invalid_query_parameter (param, msg) ->
             Response.respond ~status:Response.status_bad_request
