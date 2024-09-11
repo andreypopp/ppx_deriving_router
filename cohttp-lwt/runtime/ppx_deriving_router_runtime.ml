@@ -11,20 +11,23 @@ open struct
 
   module Request :
     Ppx_deriving_router_runtime_lib.REQUEST
-      with type t = Cohttp_lwt_unix.Request.t * Cohttp_lwt.Body.t and type 'a IO.t = 'a IO.t = struct
+      with type t = Cohttp_lwt_unix.Request.t * Cohttp_lwt.Body.t
+       and type 'a IO.t = 'a IO.t = struct
     module IO = IO
 
     type t = Cohttp_lwt_unix.Request.t * Cohttp_lwt.Body.t
 
     let queries (request, _body) =
-      (* TODO: queries in Cohttp contains (string * string list) list while router expects (string * string) list *)
-      let _ = request |> Cohttp_lwt_unix.Request.uri |> Uri.query in
-      []
+      let uri = Cohttp_lwt_unix.Request.uri request in
+      Uri.query uri
+      |> List.map (fun (k, vs) -> List.map (fun v -> k, v) vs)
+      |> List.flatten
 
-    let body ((_request, body): t) = Cohttp_lwt.Body.to_string body
+    let body ((_request, body) : t) = Cohttp_lwt.Body.to_string body
 
-    (* TODO: This is wrong, we should use the request's path *)
-    let path (_request, _body) = failwith "path is not implemented"
+    let path (request, _body) =
+      let uri = Cohttp_lwt_unix.Request.uri request in
+      Uri.path uri
 
     let method_ (request, _body) =
       match Cohttp_lwt_unix.Request.meth request with
