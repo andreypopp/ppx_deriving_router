@@ -1,7 +1,19 @@
 open struct
+  module IO :
+    Ppx_deriving_router_runtime_lib.IO with type 'a t = 'a Lwt.t = struct
+    type 'a t = 'a Lwt.t
+
+    let return = Lwt.return
+    let fail = Lwt.fail
+    let bind = Lwt.bind
+    let catch = Lwt_result.catch
+  end
+
   module Request :
     Ppx_deriving_router_runtime_lib.REQUEST
-      with type t = Cohttp_lwt_unix.Request.t * Cohttp_lwt.Body.t = struct
+      with type t = Cohttp_lwt_unix.Request.t * Cohttp_lwt.Body.t and type 'a IO.t = 'a IO.t = struct
+    module IO = IO
+
     type t = Cohttp_lwt_unix.Request.t * Cohttp_lwt.Body.t
 
     let queries (request, _body) =
@@ -31,7 +43,9 @@ open struct
   module Response :
     Ppx_deriving_router_runtime_lib.RESPONSE
       with type t = Cohttp_lwt_unix.Response.t * Cohttp_lwt.Body.t
-       and type status = Cohttp.Code.status_code = struct
+       and type status = Cohttp.Code.status_code and type 'a IO.t = 'a IO.t = struct
+    module IO = IO
+
     type t = Cohttp_lwt_unix.Response.t * Cohttp_lwt.Body.t
     type status = Cohttp.Code.status_code
 
