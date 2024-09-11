@@ -1,0 +1,12 @@
+(library
+ (name ppx_deriving_router_runtime_cohttp_runtime)
+ (public_name ppx_deriving_router.cohttp_runtime)
+ (virtual_deps cohttp)
+ (optional)
+ (wrapped false)
+ (libraries
+  http
+  cohttp
+  cohttp-lwt-unix
+  ppx_deriving_router.runtime_lib
+  melange-json-native.ppx-runtime))
