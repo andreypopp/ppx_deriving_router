@@ -75,14 +75,15 @@ let td_to_ty_handler param td =
         [%type:
           [%t td_to_ty (Some param) td] ->
           Ppx_deriving_router_runtime.request ->
-          [%t param] Ppx_deriving_router_runtime.return Lwt.t]
+          [%t param] Ppx_deriving_router_runtime.return
+          Ppx_deriving_router_runtime.IO.t]
   | None ->
       [%type:
         [%t td_to_ty param td] ->
         Ppx_deriving_router_runtime.request ->
         Ppx_deriving_router_runtime.response
         Ppx_deriving_router_runtime.return
-        Lwt.t]
+        Ppx_deriving_router_runtime.IO.t]
 
 let td_to_ty_enc param td =
   let loc = td.ptype_loc in
@@ -125,8 +126,10 @@ let derive_mount td m =
       Stdlib.List.map
         (fun route ->
           let f f req =
-            Lwt.bind (f req) (fun [%p p [%pat? x, _encode]] ->
-                Lwt.return [%e make_with_encode encode])
+            Ppx_deriving_router_runtime.IO.bind (f req)
+              (fun [%p p [%pat? x, _encode]] ->
+                Ppx_deriving_router_runtime.IO.return
+                  [%e make_with_encode encode])
           in
           Ppx_deriving_router_runtime.Handle.prefix_route
             [%e elist ~loc (List.map m.m_prefix ~f:(estring ~loc))]
@@ -262,12 +265,14 @@ let derive_path td (exemplar, ctors) =
           let pbody, ebody = patt_and_expr ~loc "_body" in
           let expr =
             match leaf.l_body with
-            | None -> [%expr Lwt.return [%e make args]]
+            | None ->
+                [%expr
+                  Ppx_deriving_router_runtime.IO.return [%e make args]]
             | Some (name, body) ->
                 let name = { loc; txt = Lident name } in
                 let args = (name, ebody) :: args in
                 [%expr
-                  Lwt.bind
+                  Ppx_deriving_router_runtime.IO.bind
                     (Ppx_deriving_router_runtime.Request.body [%e req])
                     (fun [%p pbody] ->
                       let [%p pbody] =
@@ -286,7 +291,7 @@ let derive_path td (exemplar, ctors) =
                              .Invalid_body
                                msg)
                       in
-                      Lwt.return [%e make args])]
+                      Ppx_deriving_router_runtime.IO.return [%e make args])]
           in
           let expr =
             [%expr
@@ -433,7 +438,7 @@ let derive_router_td td =
                   (Some [%pat? p, encode])]
               req
             ->
-              Lwt.bind (f p req)
+              Ppx_deriving_router_runtime.IO.bind (f p req)
                 (Ppx_deriving_router_runtime.Handle.encode encode))];
     [%stri
       let [%p pvar ~loc (handle_name td)] =

@@ -1,7 +1,20 @@
 open struct
+  module IO :
+    Ppx_deriving_router_runtime_lib.IO with type 'a t = 'a Lwt.t = struct
+    type 'a t = 'a Lwt.t
+
+    let return = Lwt.return
+    let fail = Lwt.fail
+    let bind = Lwt.bind
+    let catch = Lwt_result.catch
+  end
+
   module Request :
-    Ppx_deriving_router_runtime_lib.REQUEST with type t = Dream.request =
-  struct
+    Ppx_deriving_router_runtime_lib.REQUEST
+      with type 'a IO.t = 'a IO.t
+       and type t = Dream.request = struct
+    module IO = IO
+
     type t = Dream.request
 
     let queries = Dream.all_queries
@@ -19,8 +32,11 @@ open struct
 
   module Response :
     Ppx_deriving_router_runtime_lib.RESPONSE
-      with type status = Dream.status
+      with type 'a IO.t = 'a IO.t
+       and type status = Dream.status
        and type t = Dream.response = struct
+    module IO = IO
+
     type status = Dream.status
 
     let status_ok : status = `OK
