@@ -3,18 +3,18 @@ open Lwt.Syntax
 open struct
   module Request :
     Ppx_deriving_router_runtime_lib.REQUEST
-      with type t = Cohttp_lwt_unix.Request.t = struct
-    type t = Cohttp_lwt_unix.Request.t
+      with type t = Cohttp_lwt_unix.Request.t * Cohttp_lwt.Body.t = struct
+    type t = Cohttp_lwt_unix.Request.t * Cohttp_lwt.Body.t
 
-    let queries request =
+    let queries (request, _body) =
       (* TODO: queries in Cohttp contains (string * string list) list while router expects (string * string) list *)
       let _ = request |> Cohttp_lwt_unix.Request.uri |> Uri.query in
       []
 
-    let body _ = failwith "Not implemented"
-    let path request = Cohttp_lwt_unix.Request.resource request
+    let body ((_request, body): t) = Cohttp_lwt.Body.to_string body
+    let path (request, _body) = Cohttp_lwt_unix.Request.resource request
 
-    let method_ request =
+    let method_ (request, _body) =
       match Cohttp_lwt_unix.Request.meth request with
       | `GET -> `GET
       | `POST -> `POST
