@@ -1,7 +1,7 @@
 (executable
  (name test)
  (preprocess
-  (pps ppx_deriving_router.dream melange-json-native.ppx)))
+  (pps ppx_deriving_router.cohttp melange-json-native.ppx)))
 
 (cram
  (deps ./test.exe (package ppx_deriving_router)))

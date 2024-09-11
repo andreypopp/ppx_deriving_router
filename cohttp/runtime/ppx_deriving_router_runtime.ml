@@ -10,7 +10,9 @@ open struct
       []
 
     let body ((_request, body): t) = Cohttp_lwt.Body.to_string body
-    let path (request, _body) = Cohttp_lwt_unix.Request.resource request
+
+    (* TODO: This is wrong, we should use the request's path *)
+    let path (_request, _body) = failwith "path is not implemented"
 
     let method_ (request, _body) =
       match Cohttp_lwt_unix.Request.meth request with

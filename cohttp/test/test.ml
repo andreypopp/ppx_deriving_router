@@ -1,17 +1,27 @@
 open Routing
 open Lwt.Infix
 
+module Server = Cohttp_lwt_unix.Server
+
+let respond body = Server.respond_string ~status:`OK ~body ()
+
+let respond_json body =
+  Server.respond_string
+    ~status:`OK
+    ~headers:(Cohttp.Header.of_list [ "Content-Type", "application/json" ])
+    ~body ()
+
 let pages_handle route _req =
   match route with
-  | Pages.Home -> Dream.respond "HOME PAGE"
+  | Pages.Home -> respond "HOME PAGE"
   | Route_with_implicit_path { param } ->
       let param = Option.value ~default:"-" param in
-      Dream.respond ("works as well, param is: " ^ param)
-  | Route_with_implicit_path_post -> Dream.respond "posted"
+      respond ("works as well, param is: " ^ param)
+  | Route_with_implicit_path_post -> respond "posted"
   | Echo_options { options } ->
       let json = Options.to_json options in
       let json = Yojson.Basic.to_string json in
-      Dream.json json
+      respond json
   | List_users { user_ids } ->
       let ids =
         match user_ids with
@@ -19,12 +29,12 @@ let pages_handle route _req =
             Printf.sprintf "[%s]"
               (user_ids |> List.map User_id.project |> String.concat ", ")
       in
-      Dream.respond (Printf.sprintf "User ids = %s" ids)
+      respond (Printf.sprintf "User ids = %s" ids)
   | User_info { user_id } | User_info_via_path { user_id } ->
-      Dream.respond
+      respond
         (Printf.sprintf "User info for %S" (User_id.project user_id))
   | Signal { level } ->
-      Dream.respond (Printf.sprintf "Signal: %d" (Level.to_int level))
+      respond (Printf.sprintf "Signal: %d" (Level.to_int level))
   | Hello { name; modifier; greeting } ->
       let greeting = Option.value greeting ~default:"Hello" in
       let name =
@@ -34,38 +44,40 @@ let pages_handle route _req =
         | Some Lowercase -> String.lowercase_ascii name
       in
       let greeting = Printf.sprintf "%s, %s!" greeting name in
-      Dream.respond greeting
+      respond greeting
 
 let pages_handler = Pages.handle pages_handle
 
 let api_handle :
     type a.
-    a Api.t -> Dream.request -> a Ppx_deriving_router_runtime.return Lwt.t
+    a Api.t -> .Request.t -> a Ppx_deriving_router_runtime.return Lwt.t
     =
  fun x _req ->
   match x with
-  | Raw_response -> Dream.respond "RAW RESPONSE"
+  | Raw_response -> respond "RAW RESPONSE"
   | List_users -> Lwt.return []
   | Create_user { id } -> Lwt.return { Api.id }
   | Get_user { id } -> Lwt.return { Api.id }
 
-let api_handler : Dream.handler = Api.handle { f = api_handle }
+let api_handler (* : Dream.handler *) = Api.handle { f = api_handle }
 
-let all_handler : Dream.handler =
+let all_handler (* : Dream.handler *) =
   let f :
       type a.
       a All.t ->
-      Dream.request ->
+      Cohttp.Request.t ->
       a Ppx_deriving_router_runtime.return Lwt.t =
    fun x req ->
     match x with
     | Pages p -> pages_handle p req
     | Api e -> api_handle e req
-    | Static { path } -> Dream.respond (Printf.sprintf "path=%S" path)
+    | Static { path } -> respond (Printf.sprintf "path=%S" path)
   in
   All.handle { f }
 
-let run () = Dream.run @@ Dream.logger @@ all_handler
+let run () =
+  let callback _conn req _body = all_handler req in
+  Lwt_main.run (Server.create ~mode:(`TCP (`Port 8080)) (Server.make ~callback ()))
 
 let test () =
   print_endline "# TESTING HREF GENERATION";
