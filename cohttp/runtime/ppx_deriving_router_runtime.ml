@@ -1,5 +1,3 @@
-open Lwt.Syntax
-
 open struct
   module Request :
     Ppx_deriving_router_runtime_lib.REQUEST
@@ -30,9 +28,9 @@ open struct
 
   module Response :
     Ppx_deriving_router_runtime_lib.RESPONSE
-      with type t = Cohttp_lwt_unix.Response.t
+      with type t = Cohttp_lwt_unix.Response.t * Cohttp_lwt.Body.t
        and type status = Cohttp.Code.status_code = struct
-    type t = Cohttp_lwt_unix.Response.t
+    type t = Cohttp_lwt_unix.Response.t * Cohttp_lwt.Body.t
     type status = Cohttp.Code.status_code
 
     let status_ok : status = `OK
@@ -42,10 +40,7 @@ open struct
 
     let respond ~status ~headers body : t Lwt.t =
       let headers = Cohttp.Header.of_list headers in
-      let+ response, _body =
-        Cohttp_lwt_unix.Server.respond_string ~body ~status ~headers ()
-      in
-      response
+      Cohttp_lwt_unix.Server.respond_string ~body ~status ~headers ()
   end
 
   module Return :
