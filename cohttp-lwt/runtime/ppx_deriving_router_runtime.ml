@@ -40,13 +40,15 @@ open struct
       | `OPTIONS -> failwith "OPTIONS is not supported"
       | `TRACE -> failwith "TRACE is not supported"
       | `CONNECT -> failwith "CONNECT is not supported"
-      | `Other other -> failwith (Printf.sprintf "%s is not supported" other)
+      | `Other other ->
+          failwith (Printf.sprintf "%s is not supported" other)
   end
 
   module Response :
     Ppx_deriving_router_runtime_lib.RESPONSE
       with type t = Cohttp_lwt_unix.Response.t * Cohttp_lwt.Body.t
-       and type status = Cohttp.Code.status_code and type 'a IO.t = 'a IO.t = struct
+       and type status = Cohttp.Code.status_code
+       and type 'a IO.t = 'a IO.t = struct
     module IO = IO
 
     type t = Cohttp_lwt_unix.Response.t * Cohttp_lwt.Body.t
