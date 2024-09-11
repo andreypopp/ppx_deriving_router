@@ -50,7 +50,7 @@ let pages_handler = Pages.handle pages_handle
 
 let api_handle :
     type a.
-    a Api.t -> .Request.t -> a Ppx_deriving_router_runtime.return Lwt.t
+    a Api.t -> Cohttp.Request.t -> a Ppx_deriving_router_runtime.return Lwt.t
     =
  fun x _req ->
   match x with
