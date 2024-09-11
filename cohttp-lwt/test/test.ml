@@ -1,5 +1,6 @@
 open Routing
 open Lwt.Infix
+open Lwt.Syntax
 module Server = Cohttp_lwt_unix.Server
 
 let respond body = Server.respond_string ~status:`OK ~body ()
@@ -123,13 +124,13 @@ let test () =
          Option.map Cohttp_lwt.Body.of_string body
          |> Option.value ~default:Cohttp_lwt.Body.empty
        in
-       h (req, body) >>= fun (resp, (_body : Cohttp_lwt.Body.t)) ->
-       (* TODO: print body *)
+       h (req, body) >>= fun (resp, body) ->
+       let* body_as_string = Cohttp_lwt.Body.to_string body in
        print_endline
          (Printf.sprintf "%s: %s"
             (Cohttp.Code.string_of_status
                (Cohttp_lwt_unix.Response.status resp))
-            "");
+            body_as_string);
        Lwt.return ())
   in
   test_req pages_handler `GET "/";

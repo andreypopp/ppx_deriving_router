@@ -17,54 +17,54 @@
   /static/js/main.js
   # TESTING ROUTE MATCHING GENERATION
   ## GET /
-  OK: HOME PAGE
+  200 OK: HOME PAGE
   ## GET /hello/world
-  OK: Hello, world!
+  200 OK: Hello, world!
   ## GET /hello/world?modifier=uppercase
-  OK: Hello, WORLD!
+  200 OK: Hello, WORLD!
   ## GET /Route_with_implicit_path
-  OK: works as well, param is: -
+  200 OK: works as well, param is: -
   ## GET /Route_with_implicit_path?param=ok
-  OK: works as well, param is: ok
+  200 OK: works as well, param is: ok
   ## POST /Route_with_implicit_path?param=ok
-  Method Not Allowed: Method not allowed
+  405 Method Not Allowed: Method not allowed
   ## GET /Route_with_implicit_path_post
-  Method Not Allowed: Method not allowed
+  405 Method Not Allowed: Method not allowed
   ## POST /Route_with_implicit_path_post
-  OK: posted
+  200 OK: posted
   ## GET /Echo_options?options={a:42}
-  OK: {"a":42}
+  200 OK: {"a":42}
   ## GET /User_info?user_id=username
-  OK: User info for "username"
+  200 OK: User info for "username"
   ## GET /user/username_via_path
-  OK: User info for "username_via_path"
+  200 OK: User info for "username_via_path"
   ## GET /Signal?level=2
-  OK: Signal: 2
+  200 OK: Signal: 2
   ## GET /List_users?user_ids=u1&user_ids=u2
-  OK: User ids = [u1, u2]
+  200 OK: User ids = [u1, u2]
   ## GET /List_users
-  OK: User ids = []
+  200 OK: User ids = []
   # TESTING ROUTE MATCHING GENERATION (API)
   ## GET /
-  OK: []
+  200 OK: []
   ## POST /
-  Bad Request: Invalid or missing request body: Blank input data
+  400 Bad Request: Invalid or missing request body: Blank input data
   ## POST /
-  Bad Request: Invalid or missing request body: Expected int, got object
+  400 Bad Request: Invalid or missing request body: Expected int, got object
   ## POST /
-  OK: {"id":1}
+  200 OK: {"id":1}
   ## GET /121
-  OK: {"id":121}
+  200 OK: {"id":121}
   ## GET /raw-response
-  OK: RAW RESPONSE
+  200 OK: RAW RESPONSE
   # TESTING ROUTE MATCHING GENERATION (ALL)
   ## GET /hello/world
-  OK: Hello, world!
+  200 OK: Hello, world!
   ## GET /
-  OK: HOME PAGE
+  200 OK: HOME PAGE
   ## GET /nested/api/121
-  OK: {"id":121}
+  200 OK: {"id":121}
   ## GET /hello/pct%20encoded?greeting=pct%20encoded
-  OK: pct encoded, pct encoded!
+  200 OK: pct encoded, pct encoded!
   ## GET /static/js/main.js
-  OK: path="/js/main.js"
+  200 OK: path="/js/main.js"
