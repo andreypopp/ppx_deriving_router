@@ -1,4 +1,5 @@
 open Routing
+open Lwt.Infix
 module Server = Cohttp_lwt_unix.Server
 
 let respond body = Server.respond_string ~status:`OK ~body ()
@@ -111,49 +112,54 @@ let test () =
           { user_ids = [ User_id.inject "u1"; User_id.inject "u2" ] }));
   print_endline (Pages.href (List_users { user_ids = [] }));
   print_endline (All.href (Static { path = "/js/main.js" }));
-  print_endline "# TESTING ROUTE MATCHING GENERATION"
-(* let test_req ?body h method_ target =
-     print_endline
-       (Printf.sprintf "## %s %s" (Http.Method.to_string method_) target);
-     Lwt_main.run
-       (let req = Dream.request ~method_ ~target "" in
-        Option.iter (Dream.set_body req) body;
-        h req >>= fun resp ->
-        Dream.body resp >>= fun body ->
-        print_endline
-          (Printf.sprintf "%s: %s"
-             (Dream.status resp |> Dream.status_to_string)
-             body);
-        Lwt.return ())
-   in
-   test_req pages_handler `GET "/";
-   test_req pages_handler `GET "/hello/world";
-   test_req pages_handler `GET "/hello/world?modifier=uppercase";
-   test_req pages_handler `GET "/Route_with_implicit_path";
-   test_req pages_handler `GET "/Route_with_implicit_path?param=ok";
-   test_req pages_handler `POST "/Route_with_implicit_path?param=ok";
-   test_req pages_handler `GET "/Route_with_implicit_path_post";
-   test_req pages_handler `POST "/Route_with_implicit_path_post";
-   test_req pages_handler `GET "/Echo_options?options={a:42}";
-   test_req pages_handler `GET "/User_info?user_id=username";
-   test_req pages_handler `GET "/user/username_via_path";
-   test_req pages_handler `GET "/Signal?level=2";
-   test_req pages_handler `GET "/List_users?user_ids=u1&user_ids=u2";
-   test_req pages_handler `GET "/List_users";
-   print_endline "# TESTING ROUTE MATCHING GENERATION (API)";
-   test_req api_handler `GET "/";
-   test_req api_handler `POST "/";
-   test_req api_handler ~body:"{}" `POST "/";
-   test_req api_handler ~body:"1" `POST "/";
-   test_req api_handler `GET "/121";
-   test_req api_handler `GET "/raw-response";
-   print_endline "# TESTING ROUTE MATCHING GENERATION (ALL)";
-   test_req all_handler `GET "/hello/world";
-   test_req all_handler `GET "/";
-   test_req all_handler `GET "/nested/api/121";
-   test_req pages_handler `GET
-     "/hello/pct%20encoded?greeting=pct%20encoded";
-   test_req all_handler `GET "/static/js/main.js" *)
+  print_endline "# TESTING ROUTE MATCHING GENERATION";
+  let test_req ?body h method_ target =
+    print_endline
+      (Printf.sprintf "## %s %s" (Http.Method.to_string method_) target);
+    Lwt_main.run
+      (let uri = Uri.of_string target in
+       let req = Cohttp_lwt_unix.Request.make ~meth:method_ uri in
+       let body =
+         Option.map Cohttp_lwt.Body.of_string body
+         |> Option.value ~default:Cohttp_lwt.Body.empty
+       in
+       h (req, body) >>= fun (resp, (_body : Cohttp_lwt.Body.t)) ->
+       (* TODO: print body *)
+       print_endline
+         (Printf.sprintf "%s: %s"
+            (Cohttp.Code.string_of_status
+               (Cohttp_lwt_unix.Response.status resp))
+            "");
+       Lwt.return ())
+  in
+  test_req pages_handler `GET "/";
+  test_req pages_handler `GET "/hello/world";
+  test_req pages_handler `GET "/hello/world?modifier=uppercase";
+  test_req pages_handler `GET "/Route_with_implicit_path";
+  test_req pages_handler `GET "/Route_with_implicit_path?param=ok";
+  test_req pages_handler `POST "/Route_with_implicit_path?param=ok";
+  test_req pages_handler `GET "/Route_with_implicit_path_post";
+  test_req pages_handler `POST "/Route_with_implicit_path_post";
+  test_req pages_handler `GET "/Echo_options?options={a:42}";
+  test_req pages_handler `GET "/User_info?user_id=username";
+  test_req pages_handler `GET "/user/username_via_path";
+  test_req pages_handler `GET "/Signal?level=2";
+  test_req pages_handler `GET "/List_users?user_ids=u1&user_ids=u2";
+  test_req pages_handler `GET "/List_users";
+  print_endline "# TESTING ROUTE MATCHING GENERATION (API)";
+  test_req api_handler `GET "/";
+  test_req api_handler `POST "/";
+  test_req api_handler ~body:"{}" `POST "/";
+  test_req api_handler ~body:"1" `POST "/";
+  test_req api_handler `GET "/121";
+  test_req api_handler `GET "/raw-response";
+  print_endline "# TESTING ROUTE MATCHING GENERATION (ALL)";
+  test_req all_handler `GET "/hello/world";
+  test_req all_handler `GET "/";
+  test_req all_handler `GET "/nested/api/121";
+  test_req pages_handler `GET
+    "/hello/pct%20encoded?greeting=pct%20encoded";
+  test_req all_handler `GET "/static/js/main.js"
 
 let () =
   match Sys.argv.(1) with
