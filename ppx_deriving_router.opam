@@ -20,7 +20,9 @@ depends: [
   "uri"
   "odoc" {with-doc}
 ]
-depopts: ["dream" "http" "cohttp" "cohttp-lwt" "cohttp-lwt-unix"]
+depopts: [
+  "dream" "http" "cohttp" "cohttp-lwt" "cohttp-lwt-unix" "eio" "cohttp-eio"
+]
 build: [
   ["dune" "subst"] {dev}
   [
