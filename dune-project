@@ -18,7 +18,7 @@
 (package
  (name ppx_deriving_router)
  (synopsis "Derive typesafe router from type declarations")
- (depopts dream)
+ (depopts dream http cohttp cohttp-lwt cohttp-lwt-unix)
  (depends
   (ocaml
    (>= 4.14))

@@ -1,0 +1,8 @@
+(library
+ (name ppx_deriving_router_cohttp_lwt)
+ (public_name ppx_deriving_router.cohttp_lwt)
+ (virtual_deps http cohttp cohttp-lwt cohttp-lwt-unix)
+ (optional)
+ (libraries ppx_deriving_router)
+ (ppx_runtime_libraries ppx_deriving_router.cohttp_lwt_runtime)
+ (kind ppx_deriver))
