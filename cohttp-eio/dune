@@ -1,0 +1,8 @@
+(library
+ (name ppx_deriving_router_cohttp_eio)
+ (public_name ppx_deriving_router.cohttp_eio)
+ (virtual_deps http eio cohttp cohttp-eio)
+ (optional)
+ (libraries ppx_deriving_router)
+ (ppx_runtime_libraries ppx_deriving_router.cohttp_eio_runtime)
+ (kind ppx_deriver))

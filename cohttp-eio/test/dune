@@ -1,0 +1,10 @@
+(executable
+ (name test)
+ (libraries eio eio.unix eio_main cohttp-eio)
+ (preprocess
+  (pps ppx_deriving_router.cohttp_eio melange-json-native.ppx)))
+
+(cram
+ (deps
+  ./test.exe
+  (package ppx_deriving_router)))
