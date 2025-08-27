@@ -16,7 +16,7 @@ let modifier_to_url_query k = function
   | Lowercase -> [ k, "lowercase" ]
 
 module Options = struct
-  open Ppx_deriving_json_runtime.Primitives
+  open Melange_json.Primitives
 
   type t = { a : int option } [@@deriving json, url_query_via_json]
 end
@@ -73,7 +73,7 @@ end
 
 module Api = struct
   open Ppx_deriving_router_runtime.Primitives
-  open Ppx_deriving_json_runtime.Primitives
+  open Melange_json.Primitives
 
   type user = { id : int } [@@deriving json]
 

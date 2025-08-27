@@ -156,7 +156,7 @@ response type:
 ```ocaml
 module Api = struct
   open Ppx_deriving_router_runtime.Primitives
-  open Ppx_deriving_json_runtime.Primitives
+  open Melange_json.Primitives
 
   type user = { id : int } [@@deriving json]
 
@@ -197,7 +197,7 @@ It is possible to designate a route parameter to be a request body, in this
 case, its value is decoded from the request body as JSON. The JSON decoder is
 generated automatically for the route parameter type:
 ```ocaml
-open Ppx_deriving_json_runtime.Primitives
+open Melange_json.Primitives
 type user_spec = { name : string } [@@deriving json]
 type _ api =
 | Create_user : {spec: user_spec; [@body]} -> int t [@POST]
