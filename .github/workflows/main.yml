@@ -45,7 +45,7 @@ jobs:
       - run: opam install . --deps-only
       - run: opam exec -- dune build -p ppx_deriving_router
       # build with dream (should make ppx_deriving_router.dream available)
-      - run: opam install dream http cohttp cohttp-lwt cohttp-lwt-unix --yes
+      - run: opam install dream http cohttp cohttp-lwt cohttp-lwt-unix eio cohttp-eio --yes
       - run: opam exec -- dune build -p ppx_deriving_router
       # run tests
       - run: opam install . --deps-only --with-test
