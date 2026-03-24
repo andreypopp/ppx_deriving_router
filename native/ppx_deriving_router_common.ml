@@ -32,7 +32,7 @@ let collect_params_rev ~loc uri =
         | None -> aux (`path x :: acc) xs
         | Some name -> aux (`param name :: acc) xs)
   in
-  aux [] (Uri.path uri |> String.split_on_char ~by:'/')
+  aux [] (Uri.path uri |> String.split_on_char ~sep:'/')
 
 type path = path_segment list
 
@@ -127,7 +127,7 @@ let to_supported_arg_type (t : core_type) =
   | Ptyp_alias (_, _)
   | Ptyp_variant (_, _, _)
   | Ptyp_poly (_, _)
-  | Ptyp_package _ | Ptyp_extension _ ->
+  | Ptyp_package _ | Ptyp_extension _ | Ptyp_open (_, _) ->
       Location.raise_errorf ~loc
         "cannot automatically derive type parameter decoding/encoding" ()
 
@@ -239,7 +239,7 @@ let extract td =
               | None -> [ ctor.pcd_name.txt ]
               | Some path ->
                   let path = path.txt in
-                  let path = String.split_on_char ~by:'/' path in
+                  let path = String.split_on_char ~sep:'/' path in
                   List.filter_map path ~f:(function
                     | "" -> None
                     | x -> Some x)
@@ -488,7 +488,7 @@ module Derive_href = struct
     in
     [%stri
       let [%p pvar ~loc name] =
-        [%e we [%expr ([%e pexp_function ~loc cases] : [%t t])]]]
+        [%e we [%expr ([%e pexp_function_cases ~loc cases] : [%t t])]]]
 end
 
 module Derive_method = struct
@@ -522,7 +522,7 @@ module Derive_method = struct
             in
             p --> e)
     in
-    let e = we [%expr ([%e pexp_function ~loc cases] : [%t t])] in
+    let e = we [%expr ([%e pexp_function_cases ~loc cases] : [%t t])] in
     [%stri let [%p pvar ~loc name] = [%e e]]
 end
 
@@ -561,7 +561,7 @@ module Derive_body = struct
 
             p --> e)
     in
-    let e = we [%expr ([%e pexp_function ~loc cases] : [%t t])] in
+    let e = we [%expr ([%e pexp_function_cases ~loc cases] : [%t t])] in
     [%stri let [%p pvar ~loc name] = [%e e]]
 end
 
@@ -597,7 +597,7 @@ module Derive_witness = struct
             let e = evar ~loc (ctor_mangle c.l_ctor.pcd_name.txt) in
             p --> e)
     in
-    let e = we [%expr ([%e pexp_function ~loc cases] : [%t t])] in
+    let e = we [%expr ([%e pexp_function_cases ~loc cases] : [%t t])] in
     let bnds =
       List.filter_map routes ~f:(function
         | Mount _ -> None

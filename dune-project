@@ -1,4 +1,4 @@
-(lang dune 3.11)
+(lang dune 3.15)
 
 (name ppx_deriving_router)
 
@@ -24,8 +24,8 @@
    (>= 4.14))
   dune
   lwt
-  ppxlib
-  containers
+  (ppxlib (>= 0.36))
+  (containers (>= 3.18))
   routes
   melange
   melange-fetch

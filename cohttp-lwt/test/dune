@@ -1,9 +1,12 @@
 (executable
  (name test)
+ (enabled_if false)
+ ; (enabled_if %{lib-available:cohttp-lwt})
  (preprocess
   (pps ppx_deriving_router.cohttp_lwt melange-json-native.ppx)))
 
 (cram
+ (enabled_if false)
  (deps
   ./test.exe
   (package ppx_deriving_router)))

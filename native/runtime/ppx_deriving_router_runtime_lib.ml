@@ -156,7 +156,7 @@ module Make
     let encode : type a. a encode -> a Return.t -> response IO.t =
      fun enc x ->
       let status =
-        Option.value ~default:Response.status_ok (Return.status x)
+        Stdlib.Option.value ~default:Response.status_ok (Return.status x)
       in
       let headers = Return.headers x in
       match enc, x with

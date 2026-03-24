@@ -8,10 +8,10 @@ homepage: "https://github.com/andreypopp/ppx_deriving_router"
 bug-reports: "https://github.com/andreypopp/ppx_deriving_router/issues"
 depends: [
   "ocaml" {>= "4.14"}
-  "dune" {>= "3.11"}
+  "dune" {>= "3.15"}
   "lwt"
-  "ppxlib"
-  "containers"
+  "ppxlib" {>= "0.36"}
+  "containers" {>= "3.18"}
   "routes"
   "melange"
   "melange-fetch"

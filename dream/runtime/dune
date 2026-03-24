@@ -1,6 +1,7 @@
 (library
  (name ppx_deriving_router_runtime_dream_runtime)
  (public_name ppx_deriving_router.dream_runtime)
+ (enabled_if (and %{lib-available:dream} %{lib-available:melange-json-native}))
  (wrapped false)
  (libraries
   dream

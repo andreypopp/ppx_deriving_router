@@ -1,6 +1,7 @@
 (library
  (name ppx_deriving_router_dream)
  (public_name ppx_deriving_router.dream)
+ (enabled_if (and %{lib-available:dream} %{lib-available:ppx_deriving_router.dream_runtime}))
  (libraries ppx_deriving_router)
  (ppx_runtime_libraries ppx_deriving_router.dream_runtime)
  (kind ppx_deriver))
