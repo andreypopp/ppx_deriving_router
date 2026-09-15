@@ -637,14 +637,14 @@ module Derive_url_query_via_json = struct
     [%str
       let [%p to_p] =
        fun k v ->
-        [ k, Melange_json.to_string ([%e to_json] v) ]
+        [ k, Jsonkit.to_string ([%e to_json] v) ]
 
       let [%p of_p] =
        fun k xs ->
         match Stdlib.List.assoc_opt k xs with
         | None -> Stdlib.Result.Error ("missing a query param: " ^ k)
         | Some v -> (
-            let json = Melange_json.of_string v in
+            let json = Jsonkit.of_string v in
             try Stdlib.Result.Ok ([%e of_json] json)
             with _ ->
               Stdlib.Result.Error ("error parsing query param: " ^ k))]

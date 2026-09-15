@@ -50,7 +50,7 @@
   ## POST /
   400 Bad Request: Invalid or missing request body: Blank input data
   ## POST /
-  400 Bad Request: Invalid or missing request body: Expected int, got object
+  400 Bad Request: Invalid or missing request body: expected int but got object: {}
   ## POST /
   200 OK: {"id":1}
   ## GET /121

@@ -276,8 +276,8 @@ let derive_path td (exemplar, ctors) =
                     (Ppx_deriving_router_runtime.Request.body [%e req])
                     (fun [%p pbody] ->
                       let [%p pbody] =
-                        try Melange_json.of_string [%e ebody]
-                        with Melange_json.Of_string_error msg ->
+                        try Jsonkit.of_string [%e ebody]
+                        with Jsonkit.Of_string_error msg ->
                           raise
                             (Ppx_deriving_router_runtime.Handle
                              .Invalid_body
@@ -285,8 +285,8 @@ let derive_path td (exemplar, ctors) =
                       in
                       let [%p pbody] =
                         try [%of_json: [%t body]] [%e ebody]
-                        with Melange_json.Of_json_error err ->
-                          let msg = Melange_json.of_json_error_to_string err in
+                        with Jsonkit.Of_json_error err ->
+                          let msg = Jsonkit.of_json_error_to_string err in
                           raise
                             (Ppx_deriving_router_runtime.Handle.Invalid_body msg)
                       in

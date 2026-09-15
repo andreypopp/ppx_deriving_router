@@ -5,4 +5,4 @@
  (libraries
   dream
   ppx_deriving_router.runtime_lib
-  melange-json-native))
+  jsonkit))

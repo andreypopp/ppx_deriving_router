@@ -57,7 +57,7 @@ end
 module type S = sig
   module IO : IO
 
-  type json = Melange_json.t
+  type json = Jsonkit.t
 
   module Request : REQUEST with module IO = IO
 
@@ -130,7 +130,7 @@ module Make
      and type 'a IO.t = 'a Request.IO.t
      and type 'a IO.t = 'a Response.IO.t
      and module Witness = Witness = struct
-  type json = Melange_json.t
+  type json = Jsonkit.t
   type request = Request.t
   type response = Response.t
   type 'a return = 'a Return.t
