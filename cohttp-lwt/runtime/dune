@@ -10,4 +10,4 @@
   cohttp-lwt
   cohttp-lwt-unix
   ppx_deriving_router.runtime_lib
-  melange-json-native.ppx-runtime))
+  jsonkit))

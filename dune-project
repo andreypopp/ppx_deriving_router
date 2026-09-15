@@ -29,6 +29,6 @@
   routes
   melange
   melange-fetch
-  melange-json
-  melange-json-native
+  jsonkit-melange
+  jsonkit
   uri))
